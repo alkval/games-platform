@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-server/
+.env
+.env.local
+.npm-cache/
+data/
+prisma/dev.db
+prisma/dev.db-journal
+coverage/
+*.log
+secrets/*
+!secrets/.gitkeep

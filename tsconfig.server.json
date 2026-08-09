@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "isolatedModules": false,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "rootDir": "src",
+    "outDir": "dist-server",
+    "sourceMap": true
+  },
+  "include": [
+    "src/server/**/*.ts",
+    "src/games/cardgames/war/game.ts"
+  ]
+}
+

@@ -1,0 +1,269 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: #1c1917;
+  background: #f7f3eb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+button:not(:disabled),
+a {
+  cursor: pointer;
+}
+
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #b45309;
+  outline-offset: 3px;
+}
+
+.site-header {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgb(214 211 209 / 0.75);
+  background: rgb(247 243 235 / 0.9);
+  padding: 0.75rem max(1.5rem, calc((100vw - 72rem) / 2));
+  backdrop-filter: blur(12px);
+}
+
+.header-link {
+  color: #57534e;
+  transition: color 150ms ease;
+}
+
+.header-link:hover {
+  color: #1c1917;
+}
+
+.page-shell {
+  width: min(100% - 3rem, 64rem);
+  min-height: calc(100vh - 4rem);
+  margin-inline: auto;
+  padding-block: 4rem;
+}
+
+.primary-button,
+.secondary-button,
+.small-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  font-weight: 650;
+  transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 3rem;
+  padding: 0.7rem 1.2rem;
+}
+
+.small-button {
+  min-height: 2.25rem;
+  background: #1c1917;
+  color: white;
+  padding: 0.45rem 0.8rem;
+}
+
+.primary-button {
+  border: 1px solid #1c1917;
+  background: #1c1917;
+  color: white;
+}
+
+.secondary-button {
+  border: 1px solid #d6d3d1;
+  background: transparent;
+  color: #1c1917;
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.small-button:hover {
+  transform: translateY(-1px);
+}
+
+.secondary-button:hover {
+  border-color: #78716c;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+.portal-card {
+  position: relative;
+  display: flex;
+  min-height: 18rem;
+  overflow: hidden;
+  align-items: flex-end;
+  border: 1px solid rgb(120 113 108 / 0.25);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.portal-card:hover,
+.game-list-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 38px rgb(41 37 36 / 0.1);
+}
+
+.portal-card-warm {
+  background: #e8b4a3;
+}
+
+.portal-card-cool {
+  background: #b8d5c2;
+}
+
+.portal-mark {
+  position: absolute;
+  top: -2rem;
+  right: 1rem;
+  color: rgb(255 255 255 / 0.42);
+  font-family: Georgia, serif;
+  font-size: 12rem;
+  line-height: 1;
+  transform: rotate(8deg);
+}
+
+.game-list-card {
+  border: 1px solid #d6d3d1;
+  border-radius: 1.25rem;
+  background: rgb(255 255 255 / 0.65);
+  padding: 1.75rem;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.45rem;
+  color: #44403c;
+  font-size: 0.875rem;
+  font-weight: 650;
+}
+
+.form-input {
+  display: block;
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid #d6d3d1;
+  border-radius: 0.65rem;
+  background: #fafaf9;
+  padding: 0.7rem 0.9rem;
+}
+
+.game-table {
+  background-color: #064e3b;
+  background-image: radial-gradient(circle at 50% 5%, rgb(16 185 129 / 0.18), transparent 42%), linear-gradient(90deg, rgb(0 0 0 / 0.04) 1px, transparent 1px);
+  background-size: auto, 7px 7px;
+}
+
+.score-panel {
+  align-self: center;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 1.25rem;
+  background: rgb(0 0 0 / 0.18);
+  padding: 1.5rem;
+  text-align: center;
+  color: white;
+}
+
+.score-label {
+  overflow: hidden;
+  color: #d1fae5;
+  font-size: 0.85rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.score-number {
+  margin-block: 0.35rem;
+  font-family: Georgia, serif;
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.playing-card {
+  display: inline-flex;
+  width: 5.25rem;
+  height: 7.5rem;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  border: 1px solid #d6d3d1;
+  border-radius: 0.65rem;
+  background: #fffdf8;
+  box-shadow: 0 7px 14px rgb(0 0 0 / 0.2);
+  padding: 0.6rem;
+  color: #1c1917;
+  font-family: Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.playing-card-red {
+  color: #991b1b;
+}
+
+.playing-card:disabled {
+  cursor: default;
+}
+
+.card-hand {
+  display: flex;
+  overflow-x: auto;
+  gap: 0.35rem;
+  padding: 0.75rem 0.25rem 1.5rem;
+  scrollbar-color: #a7f3d0 transparent;
+}
+
+@media (max-width: 640px) {
+  .site-header {
+    padding-inline: 1rem;
+  }
+
+  .header-link:not(button) {
+    display: none;
+  }
+
+  .page-shell {
+    width: min(100% - 2rem, 64rem);
+    padding-block: 2.5rem;
+  }
+
+  .playing-card {
+    width: 4.5rem;
+    height: 6.4rem;
+  }
+}
+

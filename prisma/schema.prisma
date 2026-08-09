@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String        @id @default(cuid())
+  googleId    String        @unique
+  email       String        @unique
+  displayName String
+  avatarUrl   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  matchPlayers MatchPlayer[]
+  stats       PlayerStat[]
+}
+
+model Match {
+  id          String        @id
+  gameId      String
+  status      String        @default("complete")
+  playerCount Int
+  resultJson  String
+  startedAt   DateTime?
+  endedAt     DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  players     MatchPlayer[]
+
+  @@index([gameId, endedAt])
+}
+
+model MatchPlayer {
+  matchId    String
+  playerId   String
+  userId     String?
+  playerName String
+  score      Int        @default(0)
+  placement  Int?
+  match      Match      @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@id([matchId, playerId])
+  @@index([userId])
+}
+
+model PlayerStat {
+  userId    String
+  gameId    String
+  played    Int      @default(0)
+  won       Int      @default(0)
+  lost      Int      @default(0)
+  draws     Int      @default(0)
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, gameId])
+  @@index([gameId, won])
+}
+
+model GameState {
+  id               String   @id
+  gameName         String
+  stateJson        String
+  initialStateJson String
+  metadataJson     String
+  logJson          String   @default("[]")
+  isGameover       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([gameName, isGameover, updatedAt])
+}
