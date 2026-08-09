@@ -54,13 +54,12 @@ openssl rand -hex 32
 
 ## Docker and Cloudflare Tunnel
 
-There are no host port mappings in `docker-compose.yml`. The public route enters through Cloudflare Tunnel and reaches `http://games:3000` on the Compose network.
+There are no host port mappings in `docker-compose.yml`. The `games` container joins its private application network and the external `portfolio_default` network used by the existing `alkval-public` Cloudflare Tunnel.
 
 1. Copy `.env.example` to `.env` and fill in the values
-2. Create `secrets/cloudflare_tunnel_token` and paste only the tunnel token into it
-3. In the Cloudflare tunnel dashboard, add the public hostname `games.alkval.com`
+2. Keep `PUBLIC_TUNNEL_NETWORK=portfolio_default`, unless the existing tunnel uses a different Docker network
+3. In the `alkval-public` tunnel, add the public hostname `games.alkval.com`
 4. Set its service to `http://games:3000`
 5. Run `docker compose up -d --build`
 
-The tunnel token is a secret. Do not commit it or paste it into logs.
-
+The game stack does not store another tunnel token or publish a host port. The existing tunnel container reaches `games` through the shared external Docker network.

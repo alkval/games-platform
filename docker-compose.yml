@@ -14,6 +14,7 @@ services:
       - games_data:/app/data
     networks:
       - games_net
+      - public_tunnel
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -23,27 +24,11 @@ services:
       start_period: 20s
       retries: 3
 
-  cloudflared:
-    image: cloudflare/cloudflared:latest
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run --token-file /run/secrets/cloudflare_tunnel_token
-    depends_on:
-      games:
-        condition: service_healthy
-    secrets:
-      - cloudflare_tunnel_token
-    networks:
-      - games_net
-    security_opt:
-      - no-new-privileges:true
-
 volumes:
   games_data:
 
 networks:
   games_net:
-
-secrets:
-  cloudflare_tunnel_token:
-    file: ./secrets/cloudflare_tunnel_token
-
+  public_tunnel:
+    external: true
+    name: ${PUBLIC_TUNNEL_NETWORK:-portfolio_default}
