@@ -1,0 +1,10 @@
+.git
+.env
+.npm-cache
+node_modules
+dist
+dist-server
+data
+coverage
+*.log
+
