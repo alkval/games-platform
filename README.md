@@ -1,4 +1,4 @@
-# Alkval Games
+# Alexander Games
 
 Small card and board games for `games.alkval.com`.
 
