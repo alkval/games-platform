@@ -5,7 +5,7 @@ export function HomePage() {
   return (
     <main className="mx-auto max-w-6xl px-6 py-20 sm:py-28">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45 }}>
-        <p className="mb-4 text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">games.alkval.com</p>
+        <p className="mb-4 text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Card &amp; board games</p>
         <h1 className="max-w-4xl text-5xl font-bold tracking-tight sm:text-7xl">Pick a game. Invite a friend. Start playing.</h1>
         <p className="mt-6 max-w-2xl text-lg text-stone-600">
           A small collection of card and board games for quick matches with friends.
