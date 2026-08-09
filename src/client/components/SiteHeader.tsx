@@ -7,7 +7,7 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <Link className="font-bold tracking-tight" to="/">
-        alkval games
+        Alexander
       </Link>
       <nav className="flex items-center gap-4 text-sm">
         <Link className="header-link" to="/cardgames">Cards</Link>
