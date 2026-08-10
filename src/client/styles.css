@@ -58,6 +58,66 @@ input:focus-visible {
   color: #1c1917;
 }
 
+.profile-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  border-radius: 999px;
+  color: #44403c;
+  font-weight: 650;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.profile-link:hover {
+  color: #1c1917;
+}
+
+.profile-avatar {
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.profile-avatar-fallback {
+  display: grid;
+  place-items: center;
+  background: #1c1917;
+  color: white;
+  font-size: 0.78rem;
+}
+
+.profile-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  border-bottom: 1px solid #d6d3d1;
+  padding-bottom: 2rem;
+}
+
+.profile-hero-avatar {
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 1.5rem;
+  object-fit: cover;
+  box-shadow: 0 12px 28px rgb(41 37 36 / 0.14);
+}
+
+.stat-card {
+  border: 1px solid #d6d3d1;
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 0.58);
+  padding: 1.25rem;
+}
+
+.profile-panel {
+  border: 1px solid #d6d3d1;
+  border-radius: 1.25rem;
+  background: rgb(255 255 255 / 0.48);
+  padding: 1.5rem;
+}
+
 .page-shell {
   width: min(100% - 3rem, 64rem);
   min-height: calc(100vh - 4rem);

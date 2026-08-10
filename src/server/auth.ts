@@ -8,7 +8,7 @@ import { prisma } from './prisma.js';
 const sessionCookie = 'alkval_games_session';
 const signingKey = new TextEncoder().encode(env.AUTH_SECRET);
 
-interface SessionClaims {
+export interface SessionClaims {
   userId: string;
   email: string;
   displayName: string;
@@ -30,7 +30,7 @@ async function createToken(claims: SessionClaims, audience: 'web' | 'game'): Pro
     .sign(signingKey);
 }
 
-async function readSession(request: Request): Promise<SessionClaims | null> {
+export async function readSession(request: Request): Promise<SessionClaims | null> {
   const token = request.cookies?.[sessionCookie] as string | undefined;
   if (!token) return null;
 

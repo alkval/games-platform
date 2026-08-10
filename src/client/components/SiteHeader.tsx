@@ -12,8 +12,16 @@ export function SiteHeader() {
       <nav className="flex items-center gap-4 text-sm">
         {!loading && user ? (
           <div className="flex items-center gap-2">
-            {user.avatarUrl && <img className="h-8 w-8 rounded-full" src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />}
-            <span className="hidden sm:inline">{user.displayName}</span>
+            <Link className="profile-link" to="/profile" aria-label={`Open ${user.displayName}'s profile`}>
+              {user.avatarUrl ? (
+                <img className="profile-avatar" src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />
+              ) : (
+                <span className="profile-avatar profile-avatar-fallback" aria-hidden="true">
+                  {user.displayName.slice(0, 1).toUpperCase()}
+                </span>
+              )}
+              <span className="hidden sm:inline">{user.displayName}</span>
+            </Link>
             <button className="header-link" type="button" onClick={() => void logout()}>Sign out</button>
           </div>
         ) : googleIsConfigured ? (
@@ -25,5 +33,6 @@ export function SiteHeader() {
     </header>
   );
 }
+
 
 

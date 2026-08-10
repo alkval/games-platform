@@ -5,6 +5,7 @@ import { BoardGamesPage } from './pages/BoardGamesPage';
 import { CardGamesPage } from './pages/CardGamesPage';
 import { HomePage } from './pages/HomePage';
 import { MattisPage } from './pages/MattisPage';
+import { ProfilePage } from './pages/ProfilePage';
 import { WarRoomPage } from './pages/WarRoomPage';
 
 export function App() {
@@ -17,6 +18,7 @@ export function App() {
         <Route path="/cardgames/war" element={<WarRoomPage />} />
         <Route path="/cardgames/mattis" element={<MattisPage />} />
         <Route path="/boardgames" element={<BoardGamesPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Routes>
     </>
   );
