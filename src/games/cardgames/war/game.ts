@@ -114,6 +114,10 @@ export const WarGame: Game<WarState> = {
     const handsAreEmpty = G.handCounts['0'] === 0 && G.handCounts['1'] === 0;
     return handsAreEmpty && G.currentTrick.length === 0 ? getWarResult(G) : undefined;
   },
+  ai: {
+    enumerate: (G, _ctx, playerID) =>
+      (G.hands[playerID] ?? []).map((_card, index) => ({ move: 'playCard', args: [index] })),
+  },
   playerView: ({ G, playerID }) => ({
     ...G,
     hands: Object.fromEntries(

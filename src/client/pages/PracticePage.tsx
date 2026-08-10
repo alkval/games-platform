@@ -1,0 +1,98 @@
+import { MCTSBot, RandomBot } from 'boardgame.io/ai';
+import { Local } from 'boardgame.io/multiplayer';
+import { Client } from 'boardgame.io/react';
+import { useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { getGame, listGames } from '../../games/registry';
+
+type Difficulty = 'easy' | 'normal' | 'hard';
+type BotOptions = ConstructorParameters<typeof MCTSBot>[0];
+class NormalBot extends MCTSBot {
+  constructor(options: BotOptions) { super({ ...options, iterations: 60, playoutDepth: 24 }); this.setOpt('async', true); }
+}
+class HardBot extends MCTSBot {
+  constructor(options: BotOptions) { super({ ...options, iterations: 180, playoutDepth: 45 }); this.setOpt('async', true); }
+}
+const difficulties: Array<{ id: Difficulty; name: string; copy: string }> = [
+  { id: 'easy', name: 'Easy', copy: 'Quick, random legal moves.' },
+  { id: 'normal', name: 'Normal', copy: 'A short Monte Carlo search.' },
+  { id: 'hard', name: 'Hard', copy: 'A longer search; still not rated ELO.' },
+];
+
+function PracticeTable({ gameId, difficulty }: { gameId: string; difficulty: Difficulty }) {
+  const [round, setRound] = useState(0);
+  const definition = getGame(gameId)!;
+  const PracticeClient = useMemo(() => {
+    if (!definition.game.ai?.enumerate) throw new Error(`${definition.name} does not support computer play.`);
+    const BotClass = difficulty === 'easy' ? RandomBot : difficulty === 'normal' ? NormalBot : HardBot;
+    return Client({
+      game: definition.game,
+      board: definition.board,
+      multiplayer: Local({ bots: { '1': BotClass } }),
+      debug: false,
+    });
+  }, [definition, difficulty]);
+
+  return (
+    <div>
+      <div className="practice-bar">
+        <div><b>You</b> vs <b>Computer</b><span className="ml-2 text-stone-500">({difficulty})</span></div>
+        <button className="secondary-button" type="button" onClick={() => setRound((value) => value + 1)}>New game</button>
+      </div>
+      <PracticeClient key={round} matchID={`practice-${gameId}-${difficulty}-${round}`} playerID="0" numPlayers={2} />
+    </div>
+  );
+}
+
+export function PracticePage() {
+  const [params, setParams] = useSearchParams();
+  const gameId = params.get('game');
+  const requestedDifficulty = params.get('difficulty');
+  const difficulty: Difficulty = requestedDifficulty === 'easy' || requestedDifficulty === 'hard' ? requestedDifficulty : 'normal';
+  const definition = gameId ? getGame(gameId) : undefined;
+  const games = listGames();
+
+  if (!definition) {
+    return (
+      <main className="page-shell">
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Solo practice</p>
+        <h1 className="mt-2 text-5xl font-bold tracking-tight">Play against the computer</h1>
+        <p className="mt-4 max-w-2xl text-stone-600">Pick any game and start immediately. These are local practice matches, so they do not change profiles or leaderboards.</p>
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {games.map((game) => (
+            <Link className="game-list-card" key={game.id} to={`/practice?game=${game.id}&difficulty=normal`}>
+              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-amber-700">{game.category === 'card' ? 'Card game' : 'Board game'}</p>
+              <h2 className="mt-2 text-3xl font-bold">{game.name}</h2>
+              <p className="mt-3 text-stone-600">{game.description}</p>
+              <p className="mt-8 font-semibold">Play vs computer &rarr;</p>
+            </Link>
+          ))}
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <div>
+      <div className="practice-setup">
+        <div className="flex flex-wrap items-center gap-4">
+          <Link className="header-link" to="/practice">&larr; All practice games</Link>
+          <strong>{definition.name}</strong>
+        </div>
+        <div className="flex flex-wrap gap-2" aria-label="Computer difficulty">
+          {difficulties.map((option) => (
+            <button
+              className={difficulty === option.id ? 'primary-button' : 'secondary-button'}
+              key={option.id}
+              type="button"
+              title={option.copy}
+              onClick={() => setParams({ game: definition.id, difficulty: option.id })}
+            >{option.name}</button>
+          ))}
+        </div>
+        <p className="basis-full text-xs text-stone-500">Difficulty is approximate, not an ELO rating. The bot only searches legal moves provided by the game.</p>
+      </div>
+      <PracticeTable key={`${definition.id}-${difficulty}`} gameId={definition.id} difficulty={difficulty} />
+    </div>
+  );
+}

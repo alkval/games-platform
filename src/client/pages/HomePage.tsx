@@ -17,7 +17,7 @@ export function HomePage() {
           <span className="portal-mark" aria-hidden="true">&spades;</span>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-red-800">Cards</p>
-            <h2 className="mt-2 text-3xl font-bold">Cards</h2>
+            <h2 className="mt-2 text-3xl font-bold">Card games</h2>
             <p className="mt-3 text-stone-700">Pick a ruleset, create a private room, and invite your friends.</p>
           </div>
         </Link>

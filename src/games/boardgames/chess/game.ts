@@ -50,5 +50,15 @@ export const ChessGame: Game<ChessState> = {
   },
   turn: { minMoves: 1, maxMoves: 1 },
   endIf: ({ G }) => getChessResult(G),
+  ai: {
+    enumerate: (G, _ctx, playerID) => {
+      const chess = new Chess(G.fen);
+      const expected = playerID === '0' ? 'w' : 'b';
+      if (chess.turn() !== expected) return [];
+      return chess.moves({ verbose: true }).map((move) => ({
+        move: 'makeMove',
+        args: [move.from, move.to, move.promotion ?? 'q'],
+      }));
+    },
+  },
 };
-

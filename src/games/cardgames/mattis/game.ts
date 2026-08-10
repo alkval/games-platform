@@ -302,6 +302,26 @@ export const MattisGame: Game<MattisState> = {
     },
   },
   endIf: ({ G }) => getMattisResult(G),
+  ai: {
+    enumerate: (G, _ctx, playerID) => {
+      if (playerID !== G.activePlayer) return [];
+      if (G.phase === 'collecting') {
+        return [
+          ...G.hands[playerID].map((_card, index) => ({ move: 'playCard', args: [index] })),
+          ...(G.stock.length > 1 ? [{ move: 'drawBlind' }] : []),
+        ];
+      }
+
+      const top = G.trick.at(-1)?.card;
+      const legal = G.mustPickUp[playerID]
+        ? []
+        : G.hands[playerID]
+            .map((card, index) => ({ card, index }))
+            .filter(({ card }) => !top || Boolean(G.trumpSuit && canBeat(card, top, G.trumpSuit)))
+            .map(({ index }) => ({ move: 'playCard', args: [index] }));
+      return legal.length ? legal : [{ move: 'pickUpOldest' }];
+    },
+  },
   playerView: ({ G, playerID }) => ({
     ...G,
     stock: [],

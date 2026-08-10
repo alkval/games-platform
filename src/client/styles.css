@@ -254,6 +254,8 @@ input:focus-visible {
 .leaderboard-row { display: grid; grid-template-columns: 4rem minmax(10rem, 1.6fr) repeat(4, minmax(5rem, .7fr)); align-items: center; gap: 1rem; min-width: 48rem; padding: 1rem 1.25rem; border-bottom: 1px solid var(--rule-soft); color: var(--ink-soft); }
 .leaderboard-row:last-child { border-bottom: 0; }.leaderboard-row:not(.leaderboard-head):hover { background: var(--paper-2, var(--paper)); color: var(--ink); }
 .leaderboard-head { color: var(--ink-muted); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.practice-setup,.practice-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--rule); background: var(--surface); padding: 1rem max(1.5rem, calc((100vw - 72rem) / 2)); }
+.practice-bar { border-top: 1px solid var(--rule); }
 @media (max-width: 760px) { .leaderboard-table { overflow-x: auto; } .site-header nav { gap: .65rem; } .site-header .header-link { font-size: .75rem; } }
 
 .page-shell {

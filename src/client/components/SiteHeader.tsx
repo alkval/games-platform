@@ -12,6 +12,7 @@ export function SiteHeader() {
         <span>games</span>
       </Link>
       <nav className="flex items-center gap-4 text-sm">
+        <Link className="header-link" to="/practice">Vs computer</Link>
         <Link className="header-link" to="/leaderboard">Leaderboard</Link>
         <ThemeToggle />
         {!loading && user ? (
