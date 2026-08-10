@@ -14,7 +14,7 @@ export function HomePage() {
 
       <section className="mt-14 grid gap-5 md:mt-20 md:grid-cols-2" aria-label="Choose a game category">
         <Link className="portal-card portal-card-warm" to="/cardgames">
-          <span className="portal-mark">â™ </span>
+          <span className="portal-mark" aria-hidden="true">&spades;</span>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-red-800">Cards</p>
             <h2 className="mt-2 text-3xl font-bold">War is ready</h2>
@@ -22,7 +22,7 @@ export function HomePage() {
           </div>
         </Link>
         <Link className="portal-card portal-card-cool" to="/boardgames">
-          <span className="portal-mark">â™Ÿ</span>
+          <span className="portal-mark" aria-hidden="true">&#9823;</span>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-emerald-900">Boards</p>
             <h2 className="mt-2 text-3xl font-bold">More to come</h2>
@@ -33,5 +33,6 @@ export function HomePage() {
     </main>
   );
 }
+
 
 
