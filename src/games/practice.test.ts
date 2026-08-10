@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { ChessGame } from './boardgames/chess/game';
 import { MattisGame } from './cardgames/mattis/game';
 import { WarGame } from './cardgames/war/game';
+import { botNames, practicePlayerName } from './ai/bot-names';
 
 describe('computer practice support', () => {
   it('enumerates legal opening actions for every game', () => {
@@ -35,6 +36,29 @@ describe('computer practice support', () => {
 
     expect(client.getState()?.G.history).toHaveLength(2);
     expect(client.getState()?.ctx.currentPlayer).toBe('0');
+    client.stop();
+  });
+
+  it('supports several local bots and assigns their names in order', async () => {
+    expect(botNames).toEqual(['Craig', 'Hubert', 'Eugene', 'Montgomery', 'Cornelius']);
+    expect(Array.from({ length: 6 }, (_value, id) => practicePlayerName(id))).toEqual([
+      'You', 'Craig', 'Hubert', 'Eugene', 'Montgomery', 'Cornelius',
+    ]);
+
+    const client = Client({
+      game: MattisGame,
+      numPlayers: 4,
+      playerID: '0',
+      multiplayer: Local({ bots: { '1': RandomBot, '2': RandomBot, '3': RandomBot } }),
+    });
+    client.start();
+    const before = client.getState()!._stateID;
+    client.moves.playCard(0);
+    const deadline = Date.now() + 3000;
+    while ((client.getState()?._stateID ?? before) <= before + 1 && Date.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(client.getState()?._stateID).toBeGreaterThan(before + 1);
     client.stop();
   });
 });

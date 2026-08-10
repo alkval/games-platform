@@ -32,7 +32,7 @@ RUN npm ci --omit=dev && npm cache clean --force && npx prisma generate
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-server ./dist-server
 
-RUN mkdir -p /app/data && chown -R node:node /app
+RUN mkdir -p /app/data && chown node:node /app/data
 USER node
 
 EXPOSE 3000

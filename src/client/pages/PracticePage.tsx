@@ -4,6 +4,7 @@ import { Client } from 'boardgame.io/react';
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getGame, listGames } from '../../games/registry';
+import { practicePlayerName } from '../../games/ai/bot-names';
 
 type Difficulty = 'easy' | 'normal' | 'hard';
 type BotOptions = ConstructorParameters<typeof MCTSBot>[0];
@@ -19,19 +20,27 @@ const difficulties: Array<{ id: Difficulty; name: string; copy: string }> = [
   { id: 'hard', name: 'Hard', copy: 'A longer search; still not rated ELO.' },
 ];
 
-function PracticeTable({ gameId, difficulty }: { gameId: string; difficulty: Difficulty }) {
+function PracticeTable({ gameId, difficulty, numPlayers }: { gameId: string; difficulty: Difficulty; numPlayers: number }) {
   const [round, setRound] = useState(0);
   const definition = getGame(gameId)!;
   const PracticeClient = useMemo(() => {
     if (!definition.game.ai?.enumerate) throw new Error(`${definition.name} does not support computer play.`);
     const BotClass = difficulty === 'easy' ? RandomBot : difficulty === 'normal' ? NormalBot : HardBot;
+    const bots = Object.fromEntries(
+      Array.from({ length: numPlayers - 1 }, (_value, index) => [String(index + 1), BotClass]),
+    );
+    const NamedBoard = (props: any) => {
+      const Board = definition.board;
+      const matchData = Array.from({ length: numPlayers }, (_value, id) => ({ id, name: practicePlayerName(id) }));
+      return <Board {...props} matchData={matchData} />;
+    };
     return Client({
       game: definition.game,
-      board: definition.board,
-      multiplayer: Local({ bots: { '1': BotClass } }),
+      board: NamedBoard,
+      multiplayer: Local({ bots }),
       debug: false,
     });
-  }, [definition, difficulty]);
+  }, [definition, difficulty, numPlayers]);
 
   return (
     <div>
@@ -39,7 +48,7 @@ function PracticeTable({ gameId, difficulty }: { gameId: string; difficulty: Dif
         <div><b>You</b> vs <b>Computer</b><span className="ml-2 text-stone-500">({difficulty})</span></div>
         <button className="secondary-button" type="button" onClick={() => setRound((value) => value + 1)}>New game</button>
       </div>
-      <PracticeClient key={round} matchID={`practice-${gameId}-${difficulty}-${round}`} playerID="0" numPlayers={2} />
+      <PracticeClient key={round} matchID={`practice-${gameId}-${difficulty}-${numPlayers}-${round}`} playerID="0" numPlayers={numPlayers} />
     </div>
   );
 }
@@ -50,6 +59,10 @@ export function PracticePage() {
   const requestedDifficulty = params.get('difficulty');
   const difficulty: Difficulty = requestedDifficulty === 'easy' || requestedDifficulty === 'hard' ? requestedDifficulty : 'normal';
   const definition = gameId ? getGame(gameId) : undefined;
+  const requestedPlayers = Number(params.get('players') ?? 2);
+  const numPlayers = definition
+    ? Math.min(definition.maxPlayers, Math.max(definition.minPlayers, Number.isInteger(requestedPlayers) ? requestedPlayers : 2))
+    : 2;
   const games = listGames();
 
   if (!definition) {
@@ -86,13 +99,27 @@ export function PracticePage() {
               key={option.id}
               type="button"
               title={option.copy}
-              onClick={() => setParams({ game: definition.id, difficulty: option.id })}
+              onClick={() => setParams({ game: definition.id, difficulty: option.id, ...(definition.maxPlayers > 2 ? { players: String(numPlayers) } : {}) })}
             >{option.name}</button>
           ))}
         </div>
+        {definition.maxPlayers > 2 && (
+          <label className="flex items-center gap-3 text-sm font-semibold">
+            Players
+            <select
+              className="form-input !mt-0 !w-auto"
+              value={numPlayers}
+              onChange={(event) => setParams({ game: definition.id, difficulty, players: event.target.value })}
+            >
+              {Array.from({ length: definition.maxPlayers - definition.minPlayers + 1 }, (_value, index) => definition.minPlayers + index).map((count) => (
+                <option key={count} value={count}>{count} ({count - 1} {count === 2 ? 'bot' : 'bots'})</option>
+              ))}
+            </select>
+          </label>
+        )}
         <p className="basis-full text-xs text-stone-500">Difficulty is approximate, not an ELO rating. The bot only searches legal moves provided by the game.</p>
       </div>
-      <PracticeTable key={`${definition.id}-${difficulty}`} gameId={definition.id} difficulty={difficulty} />
+      <PracticeTable key={`${definition.id}-${difficulty}-${numPlayers}`} gameId={definition.id} difficulty={difficulty} numPlayers={numPlayers} />
     </div>
   );
 }
