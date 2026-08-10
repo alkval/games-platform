@@ -10,8 +10,6 @@ export function SiteHeader() {
         Alexander's games
       </Link>
       <nav className="flex items-center gap-4 text-sm">
-        <Link className="header-link" to="/cardgames">Cards</Link>
-        <Link className="header-link" to="/boardgames">Boards</Link>
         {!loading && user ? (
           <div className="flex items-center gap-2">
             {user.avatarUrl && <img className="h-8 w-8 rounded-full" src={user.avatarUrl} alt="" referrerPolicy="no-referrer" />}
@@ -27,4 +25,5 @@ export function SiteHeader() {
     </header>
   );
 }
+
 
