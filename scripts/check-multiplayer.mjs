@@ -44,10 +44,12 @@ async function post(path, body) {
 }
 
 async function run() {
-  const [{ startServer }, { WarGame }, { MattisGame, canBeat }] = await Promise.all([
+  const [{ startServer }, { WarGame }, { MattisGame, canBeat }, { ChessGame }, { prisma }] = await Promise.all([
     import('../dist-server/server/server.js'),
     import('../dist-server/games/cardgames/war/game.js'),
     import('../dist-server/games/cardgames/mattis/game.js'),
+    import('../dist-server/games/boardgames/chess/game.js'),
+    import('../dist-server/server/prisma.js'),
   ]);
 
   const stopServer = await startServer();
@@ -141,6 +143,32 @@ async function run() {
     }, 'Completed Mattis match was not saved');
 
     console.log(`Mattis match ${mattisRoom.matchID} completed and was saved`);
+
+    const chessRoom = await post('/games/chess/create', { numPlayers: 2 });
+    const chessFirst = await post(`/games/chess/${chessRoom.matchID}/join`, { playerID: '0', playerName: 'Alice' });
+    const chessSecond = await post(`/games/chess/${chessRoom.matchID}/join`, { playerID: '1', playerName: 'Bob' });
+    const chessClients = [chessFirst, chessSecond].map((joined, playerID) => Client({ game: ChessGame, multiplayer: SocketIO({ server: serverUrl }), matchID: chessRoom.matchID, playerID: String(playerID), credentials: joined.playerCredentials }));
+    clients.push(...chessClients);
+    chessClients.forEach((client) => client.start());
+    await waitFor(() => chessClients.every((client) => client.getState()?.isConnected), 'Chess clients did not connect');
+    for (const [player, from, to] of [[0, 'f2', 'f3'], [1, 'e7', 'e5'], [0, 'g2', 'g4'], [1, 'd8', 'h4']]) {
+      const before = chessClients.map((client) => client.getState()._stateID);
+      chessClients[player].moves.makeMove(from, to);
+      await waitFor(() => chessClients.every((client, index) => client.getState()?._stateID > before[index]), `Chess move ${from}-${to} did not reach both players`);
+    }
+    await waitFor(() => chessClients[0].getState()?.ctx.gameover?.winner === '1', 'Chess checkmate was not detected');
+    await waitFor(async () => (await (await fetch(`${serverUrl}/api/matches/recent?game=chess`)).json()).some((match) => match.id === chessRoom.matchID), 'Completed chess match was not saved');
+    console.log(`Chess match ${chessRoom.matchID} completed and was saved`);
+
+    const privateEmail = `private-${process.pid}@example.test`;
+    const privacyUser = await prisma.user.create({ data: { googleId: `privacy-${process.pid}`, email: privateEmail, displayName: 'Privacy Test Player', stats: { create: { gameId: 'chess', played: 2, won: 1, lost: 0, draws: 1 } } } });
+    for (const path of ['/api/leaderboard?game=all', `/api/players/${privacyUser.id}`, '/api/matches/recent']) {
+      const response = await fetch(`${serverUrl}${path}`);
+      assert.equal(response.status, 200);
+      const body = await response.text();
+      assert.equal(body.includes(privateEmail), false, `Public endpoint ${path} exposed a private email`);
+    }
+    console.log('Public leaderboard, player profile, and recent-match APIs do not expose email addresses');
   } finally {
     clients.forEach((client) => client.stop());
     await new Promise((resolve) => setTimeout(resolve, 500));

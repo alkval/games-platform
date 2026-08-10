@@ -3,6 +3,8 @@ import { MattisGame } from './cardgames/mattis/game';
 import { WarBoard } from './cardgames/war/WarBoard';
 import { WarGame } from './cardgames/war/game';
 import { getGame, registerGame } from './registry';
+import { ChessBoard } from './boardgames/chess/ChessBoard';
+import { ChessGame } from './boardgames/chess/game';
 
 if (!getGame('war')) {
   registerGame({
@@ -15,6 +17,10 @@ if (!getGame('war')) {
     game: WarGame,
     board: WarBoard,
   });
+}
+
+if (!getGame('chess')) {
+  registerGame({ id: 'chess', name: 'Chess', category: 'board', description: 'Classic two-player chess with complete legal move checking.', minPlayers: 2, maxPlayers: 2, game: ChessGame, board: ChessBoard });
 }
 
 if (!getGame('mattis')) {

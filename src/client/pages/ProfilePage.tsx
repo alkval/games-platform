@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth-context';
+import { publicGameName } from '../../games/public-games';
 
 interface ProfileData {
   profile: {
@@ -22,6 +23,7 @@ interface ProfileData {
     won: number;
     lost: number;
     draws: number;
+    winRate: number;
   }>;
   recentMatches: Array<{
     id: string;
@@ -32,10 +34,6 @@ interface ProfileData {
     outcome: 'win' | 'loss' | 'draw';
     endedAt: string;
   }>;
-}
-
-function gameName(gameId: string): string {
-  return gameId.charAt(0).toUpperCase() + gameId.slice(1).replaceAll('-', ' ');
 }
 
 function formatDate(value: string): string {
@@ -146,8 +144,8 @@ export function ProfilePage() {
             <div className="mt-5 divide-y divide-stone-200">
               {profile.byGame.map((stat) => (
                 <div className="flex items-center justify-between gap-4 py-4" key={stat.gameId}>
-                  <div><p className="font-semibold">{gameName(stat.gameId)}</p><p className="text-sm text-stone-500">{stat.played} played</p></div>
-                  <p className="text-sm text-stone-600">{stat.won}W &middot; {stat.lost}L &middot; {stat.draws}D</p>
+                  <div><p className="font-semibold">{publicGameName(stat.gameId)}</p><p className="text-sm text-stone-500">{stat.played} played &middot; {stat.winRate}% win rate</p></div>
+                  <p className="text-sm text-stone-600">{stat.won}W &middot; {stat.draws}D &middot; {stat.lost}L</p>
                 </div>
               ))}
             </div>
@@ -166,7 +164,7 @@ export function ProfilePage() {
             <div className="mt-5 divide-y divide-stone-200">
               {profile.recentMatches.map((match) => (
                 <div className="flex items-center justify-between gap-4 py-4" key={match.id}>
-                  <div><p className="font-semibold">{gameName(match.gameId)}</p><p className="text-sm text-stone-500">{formatDate(match.endedAt)} &middot; Score {match.score}</p></div>
+                  <div><p className="font-semibold">{publicGameName(match.gameId)}</p><p className="text-sm text-stone-500">{formatDate(match.endedAt)} &middot; Score {match.score}</p></div>
                   <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider ${match.outcome === 'win' ? 'bg-emerald-100 text-emerald-800' : match.outcome === 'draw' ? 'bg-amber-100 text-amber-800' : 'bg-stone-200 text-stone-700'}`}>{match.outcome}</span>
                 </div>
               ))}

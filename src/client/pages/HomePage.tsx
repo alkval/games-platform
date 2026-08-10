@@ -17,7 +17,7 @@ export function HomePage() {
           <span className="portal-mark" aria-hidden="true">&spades;</span>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-red-800">Cards</p>
-            <h2 className="mt-2 text-3xl font-bold">War &amp; Mattis</h2>
+            <h2 className="mt-2 text-3xl font-bold">Cards</h2>
             <p className="mt-3 text-stone-700">Pick a ruleset, create a private room, and invite your friends.</p>
           </div>
         </Link>
@@ -25,8 +25,8 @@ export function HomePage() {
           <span className="portal-mark" aria-hidden="true">&#9823;</span>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-emerald-900">Boards</p>
-            <h2 className="mt-2 text-3xl font-bold">More to come</h2>
-            <p className="mt-3 text-stone-700">This side of the table is being saved for later.</p>
+            <h2 className="mt-2 text-3xl font-bold">Board games</h2>
+            <p className="mt-3 text-stone-700">Play a complete game of chess in a private room with a friend.</p>
           </div>
         </Link>
       </section>
