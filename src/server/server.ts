@@ -6,6 +6,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WarGame } from '../games/cardgames/war/game.js';
+import { MattisGame } from '../games/cardgames/mattis/game.js';
 import { configureApi } from './api.js';
 import { configureAuth } from './auth.js';
 import { env } from './env.js';
@@ -77,7 +78,7 @@ export async function startServer(): Promise<() => Promise<void>> {
   const storage = new PrismaGameStorage();
   const allowedOrigins = [env.APP_URL, /^http:\/\/localhost:\d+$/];
   const gameServer = Server({
-    games: [WarGame],
+    games: [WarGame, MattisGame],
     db: storage as never,
     origins: allowedOrigins,
     apiOrigins: allowedOrigins,

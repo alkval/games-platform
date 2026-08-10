@@ -55,8 +55,36 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
+}
+
+.mattis-rules {
+  border-top: 1px solid var(--rule);
+  padding-top: 1rem;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.mattis-rules summary {
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.mattis-rules p {
+  margin-top: 0.75rem;
+}
+
+.mattis-rules a {
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink);
+}
+
+.mattis-rules a:hover {
+  border-bottom-color: var(--accent);
+  color: var(--accent);
 }
 
 button:not(:disabled),
@@ -336,6 +364,73 @@ input:focus-visible {
   background-size: auto, 7px 7px;
 }
 
+.mattis-table {
+  background-color: #123f32;
+  background-image:
+    radial-gradient(circle at 50% 0%, rgb(34 197 94 / 0.13), transparent 38%),
+    linear-gradient(135deg, rgb(255 255 255 / 0.018) 25%, transparent 25%, transparent 50%, rgb(255 255 255 / 0.018) 50%, rgb(255 255 255 / 0.018) 75%, transparent 75%);
+  background-size: auto, 12px 12px;
+}
+
+.mattis-player {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  border-radius: 1rem;
+  background: rgb(0 0 0 / 0.14);
+  padding: 0.85rem 1rem;
+  color: white;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.mattis-player-active {
+  border-color: rgb(253 230 138 / 0.72);
+  background: rgb(0 0 0 / 0.25);
+}
+
+.mattis-trick {
+  display: flex;
+  overflow-x: auto;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.25rem 1rem;
+}
+
+.mattis-trick-card {
+  flex: 0 0 auto;
+}
+
+.playing-card-compact {
+  width: 4.5rem;
+  height: 6.4rem;
+}
+
+.mattis-pickup-button,
+.mattis-dare-button {
+  min-height: 2.5rem;
+  margin-bottom: 0.6rem;
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.mattis-pickup-button {
+  border: 1px solid rgb(253 230 138 / 0.55);
+  background: rgb(253 230 138 / 0.14);
+  color: #fef3c7;
+}
+
+.mattis-dare-button {
+  border: 1px solid rgb(167 243 208 / 0.45);
+  background: rgb(6 78 59 / 0.48);
+  color: #d1fae5;
+}
+
 .score-panel {
   align-self: center;
   border: 1px solid rgb(255 255 255 / 0.1);
@@ -448,6 +543,10 @@ input:focus-visible {
   .playing-card {
     width: 4.5rem;
     height: 6.4rem;
+  }
+
+  .mattis-trick {
+    justify-content: flex-start;
   }
 }
 

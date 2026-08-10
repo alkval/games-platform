@@ -1,5 +1,7 @@
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
+import { copyFileSync, rmSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 const { Client } = require('boardgame.io/client');
@@ -9,6 +11,15 @@ process.env.NODE_ENV = 'test';
 process.env.PORT = process.env.PORT ?? '3101';
 process.env.APP_URL = process.env.APP_URL ?? `http://localhost:${process.env.PORT}`;
 process.env.GOOGLE_CALLBACK_URL = `${process.env.APP_URL}/api/auth/google/callback`;
+const integrationDatabase = `integration-${process.pid}.db`;
+process.env.DATABASE_URL = process.env.DATABASE_URL ?? `file:./${integrationDatabase}`;
+
+if (process.env.DATABASE_URL === `file:./${integrationDatabase}`) {
+  copyFileSync(
+    fileURLToPath(new URL('../prisma/dev.db', import.meta.url)),
+    fileURLToPath(new URL(`../prisma/${integrationDatabase}`, import.meta.url)),
+  );
+}
 
 const serverUrl = process.env.APP_URL;
 
@@ -33,9 +44,10 @@ async function post(path, body) {
 }
 
 async function run() {
-  const [{ startServer }, { WarGame }] = await Promise.all([
+  const [{ startServer }, { WarGame }, { MattisGame, canBeat }] = await Promise.all([
     import('../dist-server/server/server.js'),
     import('../dist-server/games/cardgames/war/game.js'),
+    import('../dist-server/games/cardgames/mattis/game.js'),
   ]);
 
   const stopServer = await startServer();
@@ -80,10 +92,62 @@ async function run() {
     }, 'Completed match was not saved');
 
     console.log(`Multiplayer match ${matchID} completed and was saved`);
+
+    const mattisRoom = await post('/games/mattis/create', { numPlayers: 2 });
+    const mattisFirst = await post(`/games/mattis/${mattisRoom.matchID}/join`, { playerID: '0', playerName: 'Alice' });
+    const mattisSecond = await post(`/games/mattis/${mattisRoom.matchID}/join`, { playerID: '1', playerName: 'Bob' });
+    const mattisClients = [mattisFirst, mattisSecond].map((joined, playerID) =>
+      Client({
+        game: MattisGame,
+        multiplayer: SocketIO({ server: serverUrl }),
+        matchID: mattisRoom.matchID,
+        playerID: String(playerID),
+        credentials: joined.playerCredentials,
+      }),
+    );
+    clients.push(...mattisClients);
+    mattisClients.forEach((client) => client.start());
+    await waitFor(() => mattisClients.every((client) => client.getState()?.isConnected), 'Mattis clients did not connect');
+
+    for (let move = 0; move < 2500 && !mattisClients[0].getState()?.ctx.gameover; move += 1) {
+      const currentPlayer = mattisClients[0].getState().ctx.currentPlayer;
+      const activeClient = mattisClients[Number(currentPlayer)];
+      const state = activeClient.getState();
+      const previousStateIDs = mattisClients.map((client) => client.getState()._stateID);
+
+      if (state.G.phase === 'collecting') {
+        activeClient.moves.playCard(0);
+      } else {
+        const hand = state.G.hands[currentPlayer];
+        const top = state.G.trick.at(-1)?.card;
+        const legalIndex = state.G.mustPickUp[currentPlayer]
+          ? -1
+          : hand.findIndex((card) => !top || (state.G.trumpSuit && canBeat(card, top, state.G.trumpSuit)));
+        if (legalIndex >= 0) activeClient.moves.playCard(legalIndex);
+        else activeClient.moves.pickUpOldest();
+      }
+
+      await waitFor(
+        () => mattisClients.every((client, index) => client.getState()?._stateID > previousStateIDs[index]),
+        `Mattis move ${move + 1} did not reach both players`,
+      );
+    }
+
+    await waitFor(() => Boolean(mattisClients[0].getState()?.ctx.gameover), 'The Mattis match did not finish');
+    await waitFor(async () => {
+      const response = await fetch(`${serverUrl}/api/matches/recent?game=mattis`);
+      const matches = await response.json();
+      return matches.some((match) => match.id === mattisRoom.matchID);
+    }, 'Completed Mattis match was not saved');
+
+    console.log(`Mattis match ${mattisRoom.matchID} completed and was saved`);
   } finally {
     clients.forEach((client) => client.stop());
     await new Promise((resolve) => setTimeout(resolve, 500));
     await stopServer();
+    if (process.env.DATABASE_URL === `file:./${integrationDatabase}`) {
+      rmSync(fileURLToPath(new URL(`../prisma/${integrationDatabase}`, import.meta.url)), { force: true });
+    }
   }
 }
 

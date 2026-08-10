@@ -1,3 +1,5 @@
+import { MattisBoard } from './cardgames/mattis/MattisBoard';
+import { MattisGame } from './cardgames/mattis/game';
 import { WarBoard } from './cardgames/war/WarBoard';
 import { WarGame } from './cardgames/war/game';
 import { getGame, registerGame } from './registry';
@@ -15,3 +17,15 @@ if (!getGame('war')) {
   });
 }
 
+if (!getGame('mattis')) {
+  registerGame({
+    id: 'mattis',
+    name: 'Mattis',
+    category: 'card',
+    description: 'Collect strong cards, reveal trump, then race to shed your hand.',
+    minPlayers: 2,
+    maxPlayers: 6,
+    game: MattisGame,
+    board: MattisBoard,
+  });
+}

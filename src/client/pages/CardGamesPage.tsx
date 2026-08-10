@@ -13,22 +13,16 @@ export function CardGamesPage() {
           <Link className="game-list-card" key={game.id} to={`/cardgames/${game.id}`}>
             <div className="flex items-start justify-between gap-6">
               <div>
-                <p className="text-sm text-stone-500">{game.minPlayers} players</p>
+                <p className="text-sm text-stone-500">{game.minPlayers === game.maxPlayers ? game.minPlayers : `${game.minPlayers}-${game.maxPlayers}`} players</p>
                 <h2 className="mt-1 text-3xl font-bold">{game.name}</h2>
                 <p className="mt-3 text-stone-600">{game.description}</p>
               </div>
-              <span className="text-5xl text-red-800">♥</span>
+              <span className="text-5xl text-red-800" aria-hidden="true">{game.id === 'mattis' ? '\u2660' : '\u2665'}</span>
             </div>
             <p className="mt-8 font-semibold">Play now</p>
           </Link>
         ))}
-        <Link className="game-list-card opacity-75" to="/cardgames/mattis">
-          <p className="text-sm text-stone-500">Coming next</p>
-          <h2 className="mt-1 text-3xl font-bold">Mattis</h2>
-          <p className="mt-3 text-stone-600">Collection first, then race to get rid of your cards.</p>
-        </Link>
       </div>
     </main>
   );
 }
-

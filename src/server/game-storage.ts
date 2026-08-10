@@ -9,7 +9,12 @@ function decode<T>(value: string): T {
 async function saveMatchHistory(matchID: string, state: State, metadata: ServerTypes.MatchData): Promise<void> {
   if (await prisma.match.findUnique({ where: { id: matchID } })) return;
 
-  const result = state.ctx.gameover as { winner?: string; draw?: boolean; scores?: Record<string, number> } | undefined;
+  const result = state.ctx.gameover as {
+    winner?: string;
+    draw?: boolean;
+    scores?: Record<string, number>;
+    placements?: Record<string, number>;
+  } | undefined;
   if (!result) return;
 
   const players = await Promise.all(
@@ -34,7 +39,7 @@ async function saveMatchHistory(matchID: string, state: State, metadata: ServerT
           playerName: player.playerName,
           userId: player.userId,
           score: result.scores?.[player.playerID] ?? 0,
-          placement: result.draw ? 1 : result.winner === player.playerID ? 1 : 2,
+          placement: result.placements?.[player.playerID] ?? (result.draw ? 1 : result.winner === player.playerID ? 1 : 2),
         })),
       },
     },
