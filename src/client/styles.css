@@ -1,11 +1,44 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
+  --paper: #f7f3eb;
+  --surface: rgb(255 255 255 / 0.58);
+  --surface-solid: #fafaf9;
+  --ink: #1c1917;
+  --ink-soft: #57534e;
+  --ink-muted: #78716c;
+  --rule: #d6d3d1;
+  --rule-soft: rgb(120 113 108 / 0.25);
+  --accent: #b45309;
+  --button-ink: #1c1917;
+  --button-paper: #ffffff;
+  --warm: #e8b4a3;
+  --cool: #b8d5c2;
+  --shadow: rgb(41 37 36 / 0.12);
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
-  color: #1c1917;
-  background: #f7f3eb;
+  color: var(--ink);
+  background: var(--paper);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+}
+
+:root[data-color-scheme="dark"] {
+  color-scheme: dark;
+  --paper: #14140f;
+  --surface: rgb(35 34 27 / 0.82);
+  --surface-solid: #23221b;
+  --ink: #f2efe7;
+  --ink-soft: #c7c1b4;
+  --ink-muted: #999385;
+  --rule: #403e34;
+  --rule-soft: rgb(236 231 217 / 0.16);
+  --accent: #e07a56;
+  --button-ink: #f2efe7;
+  --button-paper: #17160f;
+  --warm: #7a493e;
+  --cool: #365d4b;
+  --shadow: rgb(0 0 0 / 0.3);
 }
 
 * {
@@ -16,6 +49,9 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background: var(--paper);
+  color: var(--ink);
+  transition: background-color 180ms ease, color 180ms ease;
 }
 
 button,
@@ -31,7 +67,7 @@ a {
 a:focus-visible,
 button:focus-visible,
 input:focus-visible {
-  outline: 2px solid #b45309;
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
 
@@ -43,19 +79,72 @@ input:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-bottom: 1px solid rgb(214 211 209 / 0.75);
-  background: rgb(247 243 235 / 0.9);
+  border-bottom: 1px solid var(--rule-soft);
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
   padding: 0.75rem max(1.5rem, calc((100vw - 72rem) / 2));
   backdrop-filter: blur(12px);
 }
 
+.brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--ink);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.brand-mark {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.52rem;
+}
+
+.theme-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 0;
+  border-right: 1px solid var(--rule);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 0.4rem 1rem 0.4rem 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+}
+
+.theme-button:hover { color: var(--ink); }
+
+.theme-dot {
+  position: relative;
+  width: 0.75rem;
+  height: 0.75rem;
+  overflow: hidden;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+}
+
+.theme-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  transform: scaleX(0.5);
+  transform-origin: left;
+}
+
+.theme-button[data-mode="light"] .theme-dot::after { transform: scaleX(0); }
+.theme-button[data-mode="dark"] .theme-dot::after { transform: scaleX(1); }
+
 .header-link {
-  color: #57534e;
+  color: var(--ink-soft);
   transition: color 150ms ease;
 }
 
 .header-link:hover {
-  color: #1c1917;
+  color: var(--ink);
 }
 
 .profile-link {
@@ -63,13 +152,13 @@ input:focus-visible {
   align-items: center;
   gap: 0.55rem;
   border-radius: 999px;
-  color: #44403c;
+  color: var(--ink-soft);
   font-weight: 650;
   transition: color 150ms ease, background-color 150ms ease;
 }
 
 .profile-link:hover {
-  color: #1c1917;
+  color: var(--ink);
 }
 
 .profile-avatar {
@@ -83,8 +172,8 @@ input:focus-visible {
 .profile-avatar-fallback {
   display: grid;
   place-items: center;
-  background: #1c1917;
-  color: white;
+  background: var(--button-ink);
+  color: var(--button-paper);
   font-size: 0.78rem;
 }
 
@@ -92,7 +181,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   gap: 1.25rem;
-  border-bottom: 1px solid #d6d3d1;
+  border-bottom: 1px solid var(--rule);
   padding-bottom: 2rem;
 }
 
@@ -101,20 +190,20 @@ input:focus-visible {
   height: 5.5rem;
   border-radius: 1.5rem;
   object-fit: cover;
-  box-shadow: 0 12px 28px rgb(41 37 36 / 0.14);
+  box-shadow: 0 12px 28px var(--shadow);
 }
 
 .stat-card {
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--rule);
   border-radius: 1rem;
-  background: rgb(255 255 255 / 0.58);
+  background: var(--surface);
   padding: 1.25rem;
 }
 
 .profile-panel {
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--rule);
   border-radius: 1.25rem;
-  background: rgb(255 255 255 / 0.48);
+  background: var(--surface);
   padding: 1.5rem;
 }
 
@@ -144,21 +233,21 @@ input:focus-visible {
 
 .small-button {
   min-height: 2.25rem;
-  background: #1c1917;
-  color: white;
+  background: var(--button-ink);
+  color: var(--button-paper);
   padding: 0.45rem 0.8rem;
 }
 
 .primary-button {
-  border: 1px solid #1c1917;
-  background: #1c1917;
-  color: white;
+  border: 1px solid var(--button-ink);
+  background: var(--button-ink);
+  color: var(--button-paper);
 }
 
 .secondary-button {
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--rule);
   background: transparent;
-  color: #1c1917;
+  color: var(--ink);
 }
 
 .primary-button:hover,
@@ -168,7 +257,7 @@ input:focus-visible {
 }
 
 .secondary-button:hover {
-  border-color: #78716c;
+  border-color: var(--ink-muted);
 }
 
 .primary-button:disabled,
@@ -183,7 +272,7 @@ input:focus-visible {
   min-height: 18rem;
   overflow: hidden;
   align-items: flex-end;
-  border: 1px solid rgb(120 113 108 / 0.25);
+  border: 1px solid var(--rule-soft);
   border-radius: 1.5rem;
   padding: 2rem;
   transition: transform 180ms ease, box-shadow 180ms ease;
@@ -192,15 +281,15 @@ input:focus-visible {
 .portal-card:hover,
 .game-list-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 18px 38px rgb(41 37 36 / 0.1);
+  box-shadow: 0 18px 38px var(--shadow);
 }
 
 .portal-card-warm {
-  background: #e8b4a3;
+  background: var(--warm);
 }
 
 .portal-card-cool {
-  background: #b8d5c2;
+  background: var(--cool);
 }
 
 .portal-mark {
@@ -215,9 +304,9 @@ input:focus-visible {
 }
 
 .game-list-card {
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--rule);
   border-radius: 1.25rem;
-  background: rgb(255 255 255 / 0.65);
+  background: var(--surface);
   padding: 1.75rem;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
@@ -225,7 +314,7 @@ input:focus-visible {
 .form-label {
   display: block;
   margin-bottom: 0.45rem;
-  color: #44403c;
+  color: var(--ink-soft);
   font-size: 0.875rem;
   font-weight: 650;
 }
@@ -234,9 +323,10 @@ input:focus-visible {
   display: block;
   width: 100%;
   min-height: 3rem;
-  border: 1px solid #d6d3d1;
+  border: 1px solid var(--rule);
   border-radius: 0.65rem;
-  background: #fafaf9;
+  background: var(--surface-solid);
+  color: var(--ink);
   padding: 0.7rem 0.9rem;
 }
 
@@ -307,6 +397,32 @@ input:focus-visible {
   scrollbar-color: #a7f3d0 transparent;
 }
 
+/* Tailwind utilities used by the screens inherit the same effective theme. */
+:root[data-color-scheme="dark"] .text-stone-400,
+:root[data-color-scheme="dark"] .text-stone-500 { color: var(--ink-muted); }
+
+:root[data-color-scheme="dark"] .text-stone-600,
+:root[data-color-scheme="dark"] .text-stone-700 { color: var(--ink-soft); }
+
+:root[data-color-scheme="dark"] .hover\:text-stone-900:hover { color: var(--ink); }
+:root[data-color-scheme="dark"] .text-amber-700 { color: #f0a174; }
+:root[data-color-scheme="dark"] .text-red-800 { color: #f29a82; }
+:root[data-color-scheme="dark"] .text-emerald-900 { color: #b9e5ce; }
+:root[data-color-scheme="dark"] .border-stone-200,
+:root[data-color-scheme="dark"] .border-stone-300 { border-color: var(--rule); }
+:root[data-color-scheme="dark"] .bg-stone-200 { background-color: #3c3a31; }
+:root[data-color-scheme="dark"] .bg-white { background-color: var(--surface-solid); }
+:root[data-color-scheme="dark"] .bg-red-50 { background-color: #482721; }
+:root[data-color-scheme="dark"] .bg-red-50.text-red-800 { color: #ffc0ae; }
+:root[data-color-scheme="dark"] .bg-emerald-100 { background-color: #244c3c; }
+:root[data-color-scheme="dark"] .text-emerald-800 { color: #b9e5ce; }
+:root[data-color-scheme="dark"] .bg-amber-100 { background-color: #584526; }
+:root[data-color-scheme="dark"] .text-amber-800 { color: #f4d49c; }
+
+/* The felt table and physical playing cards deliberately keep their own palette. */
+.game-table .playing-card { background: #fffdf8; color: #1c1917; }
+.game-table .playing-card-red { color: #991b1b; }
+
 @media (max-width: 640px) {
   .site-header {
     padding-inline: 1rem;
@@ -314,6 +430,14 @@ input:focus-visible {
 
   .header-link:not(button) {
     display: none;
+  }
+
+  .theme-label {
+    display: none;
+  }
+
+  .theme-button {
+    padding-right: 0.75rem;
   }
 
   .page-shell {

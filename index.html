@@ -4,10 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Play card and board games online with friends." />
-    <meta name="theme-color" content="#171512" />
+    <meta id="theme-color" name="theme-color" content="#f7f3eb" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Alexander Games</title>
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem('theme');
+          const mode = saved === 'light' || saved === 'dark' ? saved : 'auto';
+          const dark = mode === 'dark' || (mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+          document.documentElement.dataset.theme = mode;
+          document.documentElement.dataset.colorScheme = dark ? 'dark' : 'light';
+          document.getElementById('theme-color').content = dark ? '#14140f' : '#f7f3eb';
+        } catch { /* use the light defaults */ }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

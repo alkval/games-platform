@@ -1,15 +1,18 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth-context';
+import { ThemeToggle } from './ThemeToggle';
 
 export function SiteHeader() {
   const { user, loading, googleIsConfigured, logout } = useAuth();
 
   return (
     <header className="site-header">
-      <Link className="font-bold tracking-tight" to="/">
-        Alexander's games
+      <Link className="brand-lockup" to="/" aria-label="Games home">
+        <img className="brand-mark" src="/favicon.png" alt="" />
+        <span>games</span>
       </Link>
       <nav className="flex items-center gap-4 text-sm">
+        <ThemeToggle />
         {!loading && user ? (
           <div className="flex items-center gap-2">
             <Link className="profile-link" to="/profile" aria-label={`Open ${user.displayName}'s profile`}>
