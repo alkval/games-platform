@@ -10,15 +10,11 @@ export function HomePage() {
         <p className="mt-6 max-w-2xl text-lg text-stone-600">
           A small collection of card and board games for quick matches with friends.
         </p>
-        <div className="mt-10 flex flex-wrap gap-3">
-          <Link className="primary-button" to="/cardgames">Browse card games</Link>
-          <Link className="secondary-button" to="/boardgames">Board games</Link>
-        </div>
       </motion.div>
 
-      <section className="mt-24 grid gap-5 md:grid-cols-2">
+      <section className="mt-14 grid gap-5 md:mt-20 md:grid-cols-2" aria-label="Choose a game category">
         <Link className="portal-card portal-card-warm" to="/cardgames">
-          <span className="portal-mark">♠</span>
+          <span className="portal-mark">â™ </span>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-red-800">Cards</p>
             <h2 className="mt-2 text-3xl font-bold">War is ready</h2>
@@ -26,7 +22,7 @@ export function HomePage() {
           </div>
         </Link>
         <Link className="portal-card portal-card-cool" to="/boardgames">
-          <span className="portal-mark">♟</span>
+          <span className="portal-mark">â™Ÿ</span>
           <div>
             <p className="text-sm font-semibold uppercase tracking-wider text-emerald-900">Boards</p>
             <h2 className="mt-2 text-3xl font-bold">More to come</h2>
@@ -37,4 +33,5 @@ export function HomePage() {
     </main>
   );
 }
+
 
