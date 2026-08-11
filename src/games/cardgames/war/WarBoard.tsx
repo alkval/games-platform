@@ -30,6 +30,9 @@ function PlayingCard({ card, onClick, disabled }: { card: Card; onClick?: () => 
 
 export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, matchData }: BoardProps<WarState>) {
   const hand = playerID ? G.hands[playerID] ?? [] : [];
+  const sortedHand = hand
+    .map((card, originalIndex) => ({ card, originalIndex }))
+    .sort((left, right) => left.card.rank - right.card.rank || left.card.suit.localeCompare(right.card.suit));
   const playerName = (id: string) => matchData?.find((player) => String(player.id) === id)?.name ?? `Player ${Number(id) + 1}`;
   const gameover = ctx.gameover as { winner?: string; draw?: boolean } | undefined;
   const lastTrick = G.lastTrick ?? [];
@@ -95,12 +98,12 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
               <p>{isActive ? 'Your turn' : `Waiting for ${playerName(ctx.currentPlayer)}`}</p>
             </div>
             <div className="card-hand">
-              {hand.map((card, index) => (
+              {sortedHand.map(({ card, originalIndex }) => (
                 <PlayingCard
                   key={card.id}
                   card={card}
                   disabled={!isActive}
-                  onClick={() => moves.playCard(index)}
+                  onClick={() => moves.playCard(originalIndex)}
                 />
               ))}
             </div>
