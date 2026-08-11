@@ -12,8 +12,9 @@ export function SiteHeader() {
         <span>games</span>
       </Link>
       <nav className="flex items-center gap-4 text-sm">
-        <Link className="desktop-navigation-link header-link" to="/practice">Vs computer</Link>
+        <Link className="desktop-navigation-link header-link" to="/practice">Practice</Link>
         <Link className="desktop-navigation-link header-link" to="/leaderboard">Leaderboard</Link>
+        {user?.isAdmin && <Link className="desktop-navigation-link header-link" to="/admin">Admin</Link>}
         <ThemeToggle />
         {!loading && user ? (
           <div className="flex items-center gap-2">
@@ -36,8 +37,9 @@ export function SiteHeader() {
         )}
       </nav>
       <nav className="mobile-navigation" aria-label="Mobile navigation">
-        <Link to="/practice">Vs computer</Link>
+        <Link to="/practice">Practice</Link>
         <Link to="/leaderboard">Leaderboard</Link>
+        {user?.isAdmin && <Link to="/admin">Admin</Link>}
       </nav>
     </header>
   );

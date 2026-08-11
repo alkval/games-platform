@@ -11,6 +11,7 @@ A self-hosted multiplayer card and board game platform for [games.alkval.com](ht
 - Google OAuth sign-in with guest play remaining available
 - Private owner-only email data and public player profiles
 - Global and per-game leaderboards
+- Administrator-only account, match, and active-room management
 - Persistent online game state, completed matches, and player statistics
 - Light, dark, and system colour themes
 - Route-level code splitting so game implementations load only when needed
@@ -60,6 +61,8 @@ Each game registers metadata, a boardgame.io rules object, a React board, player
 Google sign-in requests the `profile` and `email` scopes. A seven-day HTTP-only, secure, SameSite=Lax JWT cookie holds the web session. A separate six-hour game token associates a signed-in user with a multiplayer seat.
 
 Emails are returned only from the signed-in owner's private profile endpoint. Public leaderboards and profiles expose display name, avatar, join date, and game statistics only.
+
+The `/admin` route and every `/api/admin/*` operation are restricted server-side to `alexanderogtore@gmail.com`. The navigation link is shown only to that account, but authorization never relies on the hidden link. Destructive controls require confirmation, the active administrator cannot delete their own account, and deleting a completed match rebuilds aggregate player statistics so profiles and leaderboards remain consistent. Deleting an account removes its identity and statistics while retaining the match as anonymized history.
 
 ## Data model
 

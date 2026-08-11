@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 import { copyFileSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { SignJWT } from 'jose';
 
 const require = createRequire(import.meta.url);
 const { Client } = require('boardgame.io/client');
@@ -11,6 +12,7 @@ process.env.NODE_ENV = 'test';
 process.env.PORT = process.env.PORT ?? '3101';
 process.env.APP_URL = process.env.APP_URL ?? `http://localhost:${process.env.PORT}`;
 process.env.GOOGLE_CALLBACK_URL = `${process.env.APP_URL}/api/auth/google/callback`;
+process.env.AUTH_SECRET = 'integration-secret-that-is-at-least-32-characters';
 const integrationDatabase = `integration-${process.pid}.db`;
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? `file:./${integrationDatabase}`;
 
@@ -169,6 +171,38 @@ async function run() {
       assert.equal(body.includes(privateEmail), false, `Public endpoint ${path} exposed a private email`);
     }
     console.log('Public leaderboard, player profile, and recent-match APIs do not expose email addresses');
+
+    const adminOverview = await fetch(`${serverUrl}/api/admin/overview`);
+    assert.equal(adminOverview.status, 401, 'Unauthenticated requests must not access administration');
+    const adminDelete = await fetch(`${serverUrl}/api/admin/users/${privacyUser.id}`, { method: 'DELETE' });
+    assert.equal(adminDelete.status, 401, 'Unauthenticated requests must not use destructive administration endpoints');
+    console.log('Administration endpoints reject unauthenticated reads and deletes');
+
+    const adminUser = await prisma.user.create({ data: { googleId: `admin-${process.pid}`, email: 'alexanderogtore@gmail.com', displayName: 'Alexander' } });
+    const adminToken = await new SignJWT({ email: adminUser.email, displayName: adminUser.displayName, avatarUrl: null })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(adminUser.id)
+      .setIssuer('games.alkval.com')
+      .setAudience('web')
+      .setIssuedAt()
+      .setExpirationTime('10m')
+      .sign(new TextEncoder().encode(process.env.AUTH_SECRET));
+    const adminHeaders = { cookie: `alkval_games_session=${adminToken}` };
+    assert.equal((await fetch(`${serverUrl}/api/admin/overview`, { headers: adminHeaders })).status, 200);
+    assert.equal((await fetch(`${serverUrl}/api/admin/users/${adminUser.id}`, { method: 'DELETE', headers: adminHeaders })).status, 400, 'The active administrator must not be deletable');
+
+    const statsUser = await prisma.user.create({ data: { googleId: `stats-${process.pid}`, email: `stats-${process.pid}@example.test`, displayName: 'Stats Test Player' } });
+    for (const id of ['admin-stats-one', 'admin-stats-two']) {
+      await prisma.match.create({ data: { id: `${id}-${process.pid}`, gameId: 'chess', playerCount: 2, resultJson: JSON.stringify({ winner: '0' }), players: { create: [{ playerId: '0', playerName: statsUser.displayName, userId: statsUser.id, placement: 1 }, { playerId: '1', playerName: 'Guest', placement: 2 }] } } });
+    }
+    await prisma.playerStat.create({ data: { userId: statsUser.id, gameId: 'chess', played: 2, won: 2 } });
+    const deletedMatchId = `admin-stats-one-${process.pid}`;
+    assert.equal((await fetch(`${serverUrl}/api/admin/matches/${deletedMatchId}`, { method: 'DELETE', headers: adminHeaders })).status, 204);
+    assert.equal(await prisma.match.findUnique({ where: { id: deletedMatchId } }), null);
+    assert.deepEqual(await prisma.playerStat.findUnique({ where: { userId_gameId: { userId: statsUser.id, gameId: 'chess' } }, select: { played: true, won: true, lost: true, draws: true } }), { played: 1, won: 1, lost: 0, draws: 0 });
+    assert.equal((await fetch(`${serverUrl}/api/admin/users/${statsUser.id}`, { method: 'DELETE', headers: adminHeaders })).status, 204);
+    assert.equal(await prisma.user.findUnique({ where: { id: statsUser.id } }), null);
+    console.log('Authorized administration protects the owner and keeps statistics consistent after deletions');
   } finally {
     clients.forEach((client) => client.stop());
     await new Promise((resolve) => setTimeout(resolve, 500));

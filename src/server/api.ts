@@ -1,6 +1,7 @@
-import type { Express } from 'express';
+import type { Express, Request, Response } from 'express';
+import type { Prisma } from '@prisma/client';
 import { publicGames } from '../games/public-games.js';
-import { readSession } from './auth.js';
+import { isAdminSession, readSession, type SessionClaims } from './auth.js';
 import { prisma } from './prisma.js';
 
 type StoredResult = { winner?: string; draw?: boolean };
@@ -12,6 +13,48 @@ function totals(stats: Stat[]) { const total = stats.reduce((sum, stat) => ({ pl
 function recentMatches(players: Array<{ playerId: string; playerName: string; score: number; placement: number | null; match: { id: string; gameId: string; endedAt: Date; resultJson: string } }>) { return players.map((player) => { const result = parseResult(player.match.resultJson); return { id: player.match.id, gameId: player.match.gameId, playerName: player.playerName, score: player.score, placement: player.placement, outcome: result.draw ? 'draw' : result.winner === player.playerId ? 'win' : 'loss', endedAt: player.match.endedAt }; }); }
 const userSelect = { id: true, displayName: true, avatarUrl: true, createdAt: true, stats: { select: { gameId: true, played: true, won: true, lost: true, draws: true } }, matchPlayers: { take: 10, orderBy: { match: { endedAt: 'desc' as const } }, select: { playerId: true, playerName: true, score: true, placement: true, match: { select: { id: true, gameId: true, endedAt: true, resultJson: true } } } } } as const;
 
+async function requireAdmin(request: Request, response: Response): Promise<SessionClaims | null> {
+  const session = await readSession(request);
+  response.set('Cache-Control', 'private, no-store');
+  if (!session) {
+    response.status(401).json({ error: 'Sign in to access administration' });
+    return null;
+  }
+  if (!isAdminSession(session)) {
+    response.status(403).json({ error: 'Administrator access required' });
+    return null;
+  }
+  return session;
+}
+
+async function rebuildPlayerStats(database: Prisma.TransactionClient): Promise<void> {
+  const matches = await database.match.findMany({
+    select: {
+      gameId: true,
+      resultJson: true,
+      players: { select: { userId: true, playerId: true } },
+    },
+  });
+  const aggregate = new Map<string, Stat & { userId: string }>();
+
+  for (const match of matches) {
+    const result = parseResult(match.resultJson);
+    for (const player of match.players) {
+      if (!player.userId) continue;
+      const key = `${player.userId}:${match.gameId}`;
+      const stat = aggregate.get(key) ?? { userId: player.userId, gameId: match.gameId, played: 0, won: 0, lost: 0, draws: 0 };
+      stat.played += 1;
+      if (result.draw) stat.draws += 1;
+      else if (result.winner === player.playerId) stat.won += 1;
+      else stat.lost += 1;
+      aggregate.set(key, stat);
+    }
+  }
+
+  await database.playerStat.deleteMany();
+  for (const stat of aggregate.values()) await database.playerStat.create({ data: stat });
+}
+
 export function configureApi(app: Express): void {
   app.get('/api/profile', async (request, response, next) => { try { const session = await readSession(request); if (!session) return void response.status(401).json({ error: 'Sign in to view your profile' }); const user = await prisma.user.findUnique({ where: { id: session.userId }, select: { ...userSelect, email: true } }); if (!user) return void response.status(404).json({ error: 'Profile not found' }); response.set('Cache-Control', 'private, no-store'); response.json({ profile: { id: user.id, displayName: user.displayName, email: user.email, avatarUrl: user.avatarUrl, memberSince: user.createdAt }, totals: totals(user.stats), byGame: fullStats(user.stats), recentMatches: recentMatches(user.matchPlayers) }); } catch (error) { next(error); } });
 
@@ -20,4 +63,86 @@ export function configureApi(app: Express): void {
   app.get('/api/leaderboard', async (request, response, next) => { try { const scope = typeof request.query.game === 'string' ? request.query.game : 'all'; if (scope !== 'all' && !gameIds.includes(scope as typeof gameIds[number])) return void response.status(400).json({ error: 'Unknown game' }); const users = await prisma.user.findMany({ select: { id: true, displayName: true, avatarUrl: true, createdAt: true, stats: { select: { gameId: true, played: true, won: true, lost: true, draws: true } } } }); const ranked = users.map((user) => { const selected = scope === 'all' ? user.stats : user.stats.filter((stat) => stat.gameId === scope); return { id: user.id, displayName: user.displayName, avatarUrl: user.avatarUrl, memberSince: user.createdAt, ...totals(selected) }; }).sort((a, b) => b.points - a.points || b.won - a.won || b.winRate - a.winRate || b.played - a.played || a.displayName.localeCompare(b.displayName)).map((player, index) => ({ rank: index + 1, ...player })); response.set('Cache-Control', 'public, max-age=30'); response.json({ scope, games: publicGames, players: ranked }); } catch (error) { next(error); } });
 
   app.get('/api/matches/recent', async (request, response, next) => { try { const gameId = typeof request.query.game === 'string' ? request.query.game : undefined; const matches = await prisma.match.findMany({ where: { gameId }, orderBy: { endedAt: 'desc' }, take: 12, select: { id: true, gameId: true, playerCount: true, endedAt: true, resultJson: true, players: { orderBy: { placement: 'asc' }, select: { playerName: true, score: true, placement: true } } } }); response.json(matches.map((match) => ({ id: match.id, gameId: match.gameId, playerCount: match.playerCount, endedAt: match.endedAt, result: parseResult(match.resultJson), players: match.players }))); } catch (error) { next(error); } });
+
+  app.get('/api/admin/overview', async (request, response, next) => {
+    try {
+      if (!await requireAdmin(request, response)) return;
+      const [users, matches, rooms] = await Promise.all([
+        prisma.user.findMany({
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            avatarUrl: true,
+            createdAt: true,
+            _count: { select: { matchPlayers: true } },
+          },
+        }),
+        prisma.match.findMany({
+          orderBy: { endedAt: 'desc' },
+          take: 200,
+          select: {
+            id: true,
+            gameId: true,
+            playerCount: true,
+            endedAt: true,
+            players: { orderBy: { placement: 'asc' }, select: { playerName: true, userId: true } },
+          },
+        }),
+        prisma.gameState.findMany({
+          where: { isGameover: false },
+          orderBy: { updatedAt: 'desc' },
+          take: 200,
+          select: { id: true, gameName: true, createdAt: true, updatedAt: true },
+        }),
+      ]);
+      response.json({ users, matches, rooms });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete('/api/admin/matches/:matchId', async (request, response, next) => {
+    try {
+      if (!await requireAdmin(request, response)) return;
+      const matchId = String(request.params.matchId);
+      const match = await prisma.match.findUnique({ where: { id: matchId }, select: { id: true } });
+      if (!match) return void response.status(404).json({ error: 'Match not found' });
+      await prisma.$transaction(async (database) => {
+        await database.match.delete({ where: { id: matchId } });
+        await database.gameState.deleteMany({ where: { id: matchId } });
+        await rebuildPlayerStats(database);
+      });
+      response.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete('/api/admin/rooms/:roomId', async (request, response, next) => {
+    try {
+      if (!await requireAdmin(request, response)) return;
+      const deleted = await prisma.gameState.deleteMany({ where: { id: String(request.params.roomId), isGameover: false } });
+      if (!deleted.count) return void response.status(404).json({ error: 'Active room not found' });
+      response.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.delete('/api/admin/users/:userId', async (request, response, next) => {
+    try {
+      const session = await requireAdmin(request, response);
+      if (!session) return;
+      const userId = String(request.params.userId);
+      if (userId === session.userId) return void response.status(400).json({ error: 'You cannot delete the active administrator account' });
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (!user) return void response.status(404).json({ error: 'Account not found' });
+      await prisma.user.delete({ where: { id: userId } });
+      response.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  });
 }

@@ -7,12 +7,17 @@ import { prisma } from './prisma.js';
 
 const sessionCookie = 'alkval_games_session';
 const signingKey = new TextEncoder().encode(env.AUTH_SECRET);
+export const adminEmail = 'alexanderogtore@gmail.com';
 
 export interface SessionClaims {
   userId: string;
   email: string;
   displayName: string;
   avatarUrl: string | null;
+}
+
+export function isAdminSession(session: SessionClaims | null): boolean {
+  return session?.email.toLowerCase() === adminEmail;
 }
 
 async function createToken(claims: SessionClaims, audience: 'web' | 'game'): Promise<string> {
@@ -152,7 +157,7 @@ export function configureAuth(app: Express): void {
     }
 
     response.json({
-      user: session,
+      user: { ...session, isAdmin: isAdminSession(session) },
       gameToken: await createToken(session, 'game'),
       googleIsConfigured,
     });
