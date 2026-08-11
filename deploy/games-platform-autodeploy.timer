@@ -1,0 +1,11 @@
+[Unit]
+Description=Check GitHub for games.alkval.com updates
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Unit=games-platform-autodeploy.service
+
+[Install]
+WantedBy=timers.target
