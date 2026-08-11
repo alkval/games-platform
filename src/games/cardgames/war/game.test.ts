@@ -11,6 +11,7 @@ function stateWithRanks(first: number, second: number): WarState {
       { playerID: '0', card: { ...deck[0], rank: first } },
       { playerID: '1', card: { ...deck[1], rank: second } },
     ],
+    lastTrick: [],
     tricksWon: { '0': 0, '1': 0 },
     ties: 0,
     round: 1,
@@ -30,6 +31,7 @@ describe('War game', () => {
     resolveTrick(state);
     expect(state.tricksWon['0']).toBe(1);
     expect(state.currentTrick).toEqual([]);
+    expect(state.lastTrick).toHaveLength(2);
     expect(state.round).toBe(2);
   });
 

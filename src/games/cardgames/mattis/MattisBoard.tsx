@@ -46,6 +46,8 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
   const allSeatsFilled = Boolean(matchData?.length) && matchData!.every((player) => Boolean(player.name));
   const playerName = (id: string) => matchData?.find((player) => String(player.id) === id)?.name ?? `Player ${Number(id) + 1}`;
   const top = G.trick.at(-1)?.card;
+  const lastTrick = G.lastTrick ?? [];
+  const visibleTrick = G.trick.length ? G.trick : lastTrick;
   const canAct = Boolean(playerID && isActive && G.activePlayer === playerID && allSeatsFilled && !gameover);
   const legalCard = (card: MattisCard) => {
     if (G.phase === 'collecting') return true;
@@ -110,7 +112,7 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
           </div>
 
           <div className="mattis-trick mt-7 min-h-44">
-            {G.trick.length ? G.trick.map((play, index) => (
+            {visibleTrick.length ? visibleTrick.map((play, index) => (
               <div className="mattis-trick-card" key={`${play.card.id}-${index}`}>
                 <p className="mb-2 max-w-24 truncate text-xs text-emerald-100/70">{playerName(play.playerID)}</p>
                 <PlayingCard card={play.card} disabled compact />
@@ -120,6 +122,7 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
               <p className="self-center text-emerald-100/65">{G.phase === 'collecting' ? 'A new collection trick is ready.' : 'Lead any card.'}</p>
             )}
           </div>
+          {lastTrick.length > 0 && G.trick.length === 0 && <p className="mt-3 text-xs uppercase tracking-wider text-emerald-100/55">Last completed trick</p>}
           <p className="mt-5 min-h-6 text-sm text-amber-200">{G.status}</p>
         </section>
 

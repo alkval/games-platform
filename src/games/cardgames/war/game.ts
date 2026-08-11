@@ -21,6 +21,7 @@ export interface WarState {
   hands: Record<string, Card[]>;
   handCounts: Record<string, number>;
   currentTrick: PlayedCard[];
+  lastTrick: PlayedCard[];
   tricksWon: Record<string, number>;
   ties: number;
   round: number;
@@ -54,6 +55,7 @@ export function resolveTrick(state: WarState): void {
     state.lastResult = `Player ${Number(winner.playerID) + 1} won with ${winner.card.label}.`;
   }
 
+  state.lastTrick = [...state.currentTrick];
   state.currentTrick = [];
   state.round += 1;
 }
@@ -87,6 +89,7 @@ export const WarGame: Game<WarState> = {
       hands,
       handCounts: { '0': hands['0'].length, '1': hands['1'].length },
       currentTrick: [],
+      lastTrick: [],
       tricksWon: { '0': 0, '1': 0 },
       ties: 0,
       round: 1,
@@ -100,6 +103,7 @@ export const WarGame: Game<WarState> = {
         return INVALID_MOVE;
       }
 
+      if (G.currentTrick.length === 0) G.lastTrick = [];
       const [card] = hand.splice(cardIndex, 1);
       G.handCounts[playerID] = hand.length;
       G.currentTrick.push({ playerID, card });

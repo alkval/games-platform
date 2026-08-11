@@ -1,23 +1,16 @@
-import { MCTSBot, RandomBot } from 'boardgame.io/ai';
 import { Local } from 'boardgame.io/multiplayer';
 import { Client } from 'boardgame.io/react';
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getGame, listGames } from '../../games/registry';
 import { practicePlayerName } from '../../games/ai/bot-names';
+import '../../games/catalog';
+import { practiceBot, type Difficulty } from '../../games/ai/practice-bots';
 
-type Difficulty = 'easy' | 'normal' | 'hard';
-type BotOptions = ConstructorParameters<typeof MCTSBot>[0];
-class NormalBot extends MCTSBot {
-  constructor(options: BotOptions) { super({ ...options, iterations: 60, playoutDepth: 24 }); this.setOpt('async', true); }
-}
-class HardBot extends MCTSBot {
-  constructor(options: BotOptions) { super({ ...options, iterations: 180, playoutDepth: 45 }); this.setOpt('async', true); }
-}
 const difficulties: Array<{ id: Difficulty; name: string; copy: string }> = [
   { id: 'easy', name: 'Easy', copy: 'Quick, random legal moves.' },
   { id: 'normal', name: 'Normal', copy: 'A short Monte Carlo search.' },
-  { id: 'hard', name: 'Hard', copy: 'A longer search; still not rated ELO.' },
+  { id: 'hard', name: 'Hard', copy: 'A longer, deeper Monte Carlo search.' },
 ];
 
 function PracticeTable({ gameId, difficulty, numPlayers }: { gameId: string; difficulty: Difficulty; numPlayers: number }) {
@@ -25,7 +18,7 @@ function PracticeTable({ gameId, difficulty, numPlayers }: { gameId: string; dif
   const definition = getGame(gameId)!;
   const PracticeClient = useMemo(() => {
     if (!definition.game.ai?.enumerate) throw new Error(`${definition.name} does not support computer play.`);
-    const BotClass = difficulty === 'easy' ? RandomBot : difficulty === 'normal' ? NormalBot : HardBot;
+    const BotClass = practiceBot(difficulty);
     const bots = Object.fromEntries(
       Array.from({ length: numPlayers - 1 }, (_value, index) => [String(index + 1), BotClass]),
     );
@@ -117,7 +110,6 @@ export function PracticePage() {
             </select>
           </label>
         )}
-        <p className="basis-full text-xs text-stone-500">Difficulty is approximate, not an ELO rating. The bot only searches legal moves provided by the game.</p>
       </div>
       <PracticeTable key={`${definition.id}-${difficulty}-${numPlayers}`} gameId={definition.id} difficulty={difficulty} numPlayers={numPlayers} />
     </div>

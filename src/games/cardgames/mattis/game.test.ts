@@ -47,6 +47,7 @@ describe('Mattis game', () => {
     expect(state.collected['1']).toHaveLength(3);
     expect(state.activePlayer).toBe('1');
     expect(state.trick).toEqual([]);
+    expect(state.lastTrick).toHaveLength(3);
   });
 
   it('sends only the tied high players into another contest', () => {

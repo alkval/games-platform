@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import type { ChessState } from './game';
 
 const glyphs: Record<Color, Record<PieceSymbol, string>> = {
-  w: { k: '\u2654', q: '\u2655', r: '\u2656', b: '\u2657', n: '\u2658', p: '\u2659' },
+  w: { k: '\u265A', q: '\u265B', r: '\u265C', b: '\u265D', n: '\u265E', p: '\u265F' },
   b: { k: '\u265A', q: '\u265B', r: '\u265C', b: '\u265D', n: '\u265E', p: '\u265F' },
 };
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -22,6 +22,15 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
   const name = (id: string) => matchData?.find((player) => String(player.id) === id)?.name ?? (id === '0' ? 'White' : 'Black');
   const gameover = ctx.gameover as { winner?: string; draw?: boolean } | undefined;
 
+  function attemptMove(from: Square, to: Square) {
+    const candidates = chess.moves({ square: from, verbose: true }).filter((move) => move.to === to);
+    if (!candidates.length) return false;
+    if (candidates.some((move) => move.promotion)) setPromotion({ from, to });
+    else moves.makeMove(from, to);
+    setSelected(null);
+    return true;
+  }
+
   function choose(square: Square) {
     if (!isActive || !playerID || gameover) return;
     const piece = chess.get(square);
@@ -34,11 +43,7 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
       setSelected(square);
       return;
     }
-    const candidates = chess.moves({ square: selected, verbose: true }).filter((move) => move.to === square);
-    if (!candidates.length) return;
-    if (candidates.some((move) => move.promotion)) setPromotion({ from: selected, to: square });
-    else moves.makeMove(selected, square);
-    setSelected(null);
+    attemptMove(selected, square);
   }
 
   const status = gameover
@@ -61,9 +66,21 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
               const light = (files.indexOf(file) + Number(rank)) % 2 === 1;
               const target = legalTargets.includes(square);
               const last = G.lastMove?.from === square || G.lastMove?.to === square;
-              return <button key={square} type="button" className={`chess-square ${light ? 'chess-light' : 'chess-dark'} ${selected === square ? 'chess-selected' : ''} ${last ? 'chess-last' : ''}`} onClick={() => choose(square)} aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ''}`}>
+              const canDrag = Boolean(isActive && playerID && piece?.color === (playerID === '0' ? 'w' : 'b'));
+              return <button
+                key={square}
+                type="button"
+                draggable={canDrag}
+                className={`chess-square ${light ? 'chess-light' : 'chess-dark'} ${selected === square ? 'chess-selected' : ''} ${last ? 'chess-last' : ''}`}
+                onClick={() => choose(square)}
+                onDragStart={(event) => { if (!canDrag) return; event.dataTransfer.setData('text/plain', square); event.dataTransfer.effectAllowed = 'move'; setSelected(square); }}
+                onDragOver={(event) => { if (legalTargets.includes(square)) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } }}
+                onDrop={(event) => { event.preventDefault(); const from = event.dataTransfer.getData('text/plain') as Square; if (/^[a-h][1-8]$/.test(from)) attemptMove(from, square); }}
+                onDragEnd={() => setSelected(null)}
+                aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ''}`}
+              >
                 {target && <span className={`chess-target ${piece ? 'chess-capture' : ''}`} />}
-                {piece && <span className="chess-piece" aria-hidden="true">{glyphs[piece.color][piece.type]}</span>}
+                {piece && <span className={`chess-piece chess-piece-${piece.color === 'w' ? 'white' : 'black'}`} aria-hidden="true">{glyphs[piece.color][piece.type]}</span>}
                 {file === orderedFiles[0] && <span className="chess-rank">{rank}</span>}
                 {rank === orderedRanks[orderedRanks.length - 1] && <span className="chess-file">{file}</span>}
               </button>;

@@ -236,13 +236,15 @@ input:focus-visible {
 }
 
 .chess-table { background: var(--paper); color: var(--ink); }
-.chess-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); width: min(100%, 44rem); aspect-ratio: 1; overflow: hidden; border: 8px solid #513925; border-radius: 0.65rem; box-shadow: 0 18px 45px var(--shadow); }
-.chess-square { position: relative; display: grid; place-items: center; min-width: 0; border: 0; padding: 0; line-height: 1; }
+.chess-board { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); grid-template-rows: repeat(8, minmax(0, 1fr)); width: min(100%, 44rem); aspect-ratio: 1; overflow: hidden; border: 8px solid #513925; border-radius: 0.65rem; box-shadow: 0 18px 45px var(--shadow); }
+.chess-square { position: relative; display: grid; place-items: center; width: 100%; height: 100%; min-width: 0; min-height: 0; border: 0; padding: 0; line-height: 1; }
 .chess-light { background: #ead8b6; }
 .chess-dark { background: #9b6b45; }
 .chess-last { box-shadow: inset 0 0 0 999px rgb(245 188 66 / 0.38); }
 .chess-selected { box-shadow: inset 0 0 0 4px #d97706; }
-.chess-piece { position: relative; z-index: 2; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif; font-size: clamp(1.8rem, 7vw, 4.2rem); color: #17120e; filter: drop-shadow(0 2px 1px rgb(255 255 255 / .35)); }
+.chess-piece { position: relative; z-index: 2; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif; font-size: clamp(1.8rem, 7vw, 4.2rem); user-select: none; pointer-events: none; }
+.chess-piece-white { color: #fffdf7; -webkit-text-stroke: 1px #3b2a1d; filter: drop-shadow(0 2px 1px rgb(0 0 0 / .45)); }
+.chess-piece-black { color: #17120e; -webkit-text-stroke: .5px #f4e5c8; filter: drop-shadow(0 2px 1px rgb(255 255 255 / .2)); }
 .chess-target { position: absolute; z-index: 3; width: 22%; aspect-ratio: 1; border-radius: 999px; background: rgb(24 24 20 / .35); }
 .chess-capture { width: 82%; background: transparent; border: 5px solid rgb(24 24 20 / .32); }
 .chess-file,.chess-rank { position: absolute; z-index: 4; font-size: clamp(.48rem, 1.4vw, .75rem); font-weight: 800; opacity: .65; }

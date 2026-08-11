@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import { listGames } from '../../games/registry';
+import { publicGames } from '../../games/public-games';
 import { PageIntro } from '../components/PageIntro';
 
 export function CardGamesPage() {
-  const games = listGames('card');
+  const games = publicGames.filter((game) => game.category === 'card');
 
   return (
     <main className="page-shell">

@@ -7,6 +7,7 @@ import { ChessGame } from './boardgames/chess/game';
 import { MattisGame } from './cardgames/mattis/game';
 import { WarGame } from './cardgames/war/game';
 import { botNames, practicePlayerName } from './ai/bot-names';
+import { EasyBot, HardBot, NormalBot } from './ai/practice-bots';
 
 describe('computer practice support', () => {
   it('enumerates legal opening actions for every game', () => {
@@ -24,7 +25,7 @@ describe('computer practice support', () => {
       game: ChessGame,
       numPlayers: 2,
       playerID: '0',
-      multiplayer: Local({ bots: { '1': RandomBot } }),
+      multiplayer: Local({ bots: { '1': EasyBot } }),
     });
     client.start();
     client.moves.makeMove('e2', 'e4');
@@ -60,5 +61,15 @@ describe('computer practice support', () => {
     }
     expect(client.getState()?._stateID).toBeGreaterThan(before + 1);
     client.stop();
+  });
+
+  it('uses significantly larger searches for hard difficulty', () => {
+    const options = { game: ChessGame, enumerate: ChessGame.ai!.enumerate };
+    const normal = new NormalBot(options);
+    const hard = new HardBot(options);
+    expect(normal.getOpt('iterations')).toBe(60);
+    expect(normal.getOpt('playoutDepth')).toBe(24);
+    expect(hard.getOpt('iterations')).toBe(180);
+    expect(hard.getOpt('playoutDepth')).toBe(45);
   });
 });

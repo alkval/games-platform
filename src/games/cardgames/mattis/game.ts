@@ -37,6 +37,7 @@ export interface MattisState {
   collected: Record<string, MattisCard[]>;
   collectedCounts: Record<string, number>;
   trick: MattisPlay[];
+  lastTrick: MattisPlay[];
   contest: MattisPlay[];
   pendingPlayers: string[];
   trumpIndicator: MattisCard | null;
@@ -97,6 +98,7 @@ function drawReplacement(G: MattisState, playerID: string): void {
 }
 
 export function beginSheddingPhase(G: MattisState): void {
+  if (G.trick.length) G.lastTrick = [...G.trick];
   for (const play of G.trick) G.hands[play.playerID].push(play.card);
   G.trick = [];
   G.contest = [];
@@ -141,6 +143,7 @@ export function resolveCollectingContest(G: MattisState): void {
 
   const winner = tied[0];
   G.collected[winner].push(...G.trick.map((play) => play.card));
+  G.lastTrick = [...G.trick];
   G.trick = [];
   G.contest = [];
   G.leader = winner;
@@ -153,6 +156,7 @@ export function resolveCollectingContest(G: MattisState): void {
 }
 
 function addCollectingPlay(G: MattisState, playerID: string, card: MattisCard): void {
+  if (G.trick.length === 0) G.lastTrick = [];
   const play = { playerID, card };
   G.trick.push(play);
   G.contest.push(play);
@@ -183,6 +187,7 @@ function advanceShedding(G: MattisState, playerID: string, completedTrick: boole
   if (remaining.length <= 1) return;
 
   if (completedTrick) {
+    G.lastTrick = [...G.trick];
     G.trick = [];
     G.round += 1;
     G.activePlayer = G.finishOrder.includes(playerID) ? nextRemainingPlayer(G, playerID) : playerID;
@@ -230,6 +235,7 @@ export function createInitialMattisState(shuffledDeck: MattisCard[], numPlayers:
     collected: Object.fromEntries(playerIDs.map((id) => [id, []])),
     collectedCounts: Object.fromEntries(playerIDs.map((id) => [id, 0])),
     trick: [],
+    lastTrick: [],
     contest: [],
     pendingPlayers: [...playerIDs],
     trumpIndicator: null,
@@ -265,6 +271,7 @@ export const MattisGame: Game<MattisState> = {
       if (top && (!G.trumpSuit || !canBeat(card, top, G.trumpSuit))) return INVALID_MOVE;
       if (G.mustPickUp[playerID]) return INVALID_MOVE;
 
+      if (G.trick.length === 0) G.lastTrick = [];
       hand.splice(cardIndex, 1);
       G.trick.push({ playerID, card });
       syncCounts(G);

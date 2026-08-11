@@ -32,6 +32,8 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
   const hand = playerID ? G.hands[playerID] ?? [] : [];
   const playerName = (id: string) => matchData?.find((player) => String(player.id) === id)?.name ?? `Player ${Number(id) + 1}`;
   const gameover = ctx.gameover as { winner?: string; draw?: boolean } | undefined;
+  const lastTrick = G.lastTrick ?? [];
+  const visibleTrick = G.currentTrick.length ? G.currentTrick : lastTrick;
 
   return (
     <main className="game-table min-h-screen px-4 py-6 sm:px-8">
@@ -56,10 +58,10 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
           <div className="rounded-3xl border border-white/10 bg-black/15 p-5 text-center text-white sm:p-8">
             <p className="text-sm text-emerald-100/70">Round {Math.min(G.round, 26)} of 26</p>
             <div className="mt-8 flex min-h-44 items-center justify-center gap-5">
-              {G.currentTrick.length === 0 ? (
+              {visibleTrick.length === 0 ? (
                 <p className="max-w-xs text-emerald-100/70">Choose a card when it is your turn.</p>
               ) : (
-                G.currentTrick.map((played) => (
+                visibleTrick.map((played) => (
                   <div key={played.playerID}>
                     <p className="mb-2 text-xs text-emerald-100/70">{playerName(played.playerID)}</p>
                     <PlayingCard card={played.card} disabled />
@@ -67,6 +69,7 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
                 ))
               )}
             </div>
+            {lastTrick.length > 0 && G.currentTrick.length === 0 && <p className="mt-3 text-xs uppercase tracking-wider text-emerald-100/55">Last reveal</p>}
             <p className="mt-5 min-h-6 text-sm text-amber-200">{G.lastResult}</p>
             <p className="mt-2 text-xs text-emerald-100/60">Ties: {G.ties}</p>
           </div>
@@ -107,4 +110,3 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
     </main>
   );
 }
-

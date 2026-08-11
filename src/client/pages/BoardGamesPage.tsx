@@ -1,9 +1,9 @@
 import { PageIntro } from '../components/PageIntro';
 import { Link } from 'react-router-dom';
-import { listGames } from '../../games/registry';
+import { publicGames } from '../../games/public-games';
 
 export function BoardGamesPage() {
-  const games = listGames('board');
+  const games = publicGames.filter((game) => game.category === 'board');
   return (
     <main className="page-shell">
       <PageIntro eyebrow="Board games" title="Choose a board" copy="Create a private room, send the link, and play in your browser." />
