@@ -88,7 +88,7 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
           <section className="mx-auto mt-8 max-w-xl rounded-2xl bg-amber-100 p-6 text-center text-stone-900 shadow-xl">
             <p className="text-sm font-semibold uppercase tracking-wider">Game over</p>
             <h2 className="mt-2 text-3xl font-bold">
-              {gameover.draw ? 'It is a draw' : `${playerName(gameover.winner ?? '0')} wins`}
+              {gameover.draw ? 'It is a draw' : gameover.winner === playerID ? 'You win' : `${playerName(gameover.winner ?? '0')} wins`}
             </h2>
           </section>
         ) : (

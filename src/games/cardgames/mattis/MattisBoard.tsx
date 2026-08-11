@@ -17,6 +17,13 @@ const suitNames: Record<MattisSuit, string> = {
   spades: 'spades',
 };
 
+const suitOrder: Record<MattisSuit, number> = {
+  clubs: 0,
+  diamonds: 1,
+  hearts: 2,
+  spades: 3,
+};
+
 function PlayingCard({ card, disabled, onClick, compact = false }: {
   card: MattisCard;
   disabled?: boolean;
@@ -42,6 +49,9 @@ function PlayingCard({ card, disabled, onClick, compact = false }: {
 
 export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, matchData }: BoardProps<MattisState>) {
   const hand = playerID ? G.hands[playerID] ?? [] : [];
+  const sortedHand = hand
+    .map((card, originalIndex) => ({ card, originalIndex }))
+    .sort((left, right) => suitOrder[left.card.suit] - suitOrder[right.card.suit] || left.card.rank - right.card.rank);
   const gameover = ctx.gameover as { winner: string; loser: string } | undefined;
   const allSeatsFilled = Boolean(matchData?.length) && matchData!.every((player) => Boolean(player.name));
   const playerName = (id: string) => matchData?.find((player) => String(player.id) === id)?.name ?? `Player ${Number(id) + 1}`;
@@ -149,12 +159,12 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
               </button>
             )}
             <div className="card-hand">
-              {hand.map((entry, index) => (
+              {sortedHand.map(({ card, originalIndex }) => (
                 <PlayingCard
-                  key={entry.id}
-                  card={entry}
-                  disabled={!canAct || !legalCard(entry)}
-                  onClick={() => moves.playCard(index)}
+                  key={card.id}
+                  card={card}
+                  disabled={!canAct || !legalCard(card)}
+                  onClick={() => moves.playCard(originalIndex)}
                 />
               ))}
             </div>

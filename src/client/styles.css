@@ -253,6 +253,8 @@ input:focus-visible {
 .chess-last { box-shadow: inset 0 0 0 999px rgb(245 188 66 / 0.38); }
 .chess-selected { box-shadow: inset 0 0 0 4px #d97706; }
 .chess-piece { position: relative; z-index: 2; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif; font-size: clamp(1.55rem, 10vw, 4.2rem); user-select: none; pointer-events: none; }
+.chess-piece[draggable="true"] { cursor: grab; pointer-events: auto; }
+.chess-piece[draggable="true"]:active { cursor: grabbing; }
 .chess-piece-white { color: #fffdf7; -webkit-text-stroke: 1px #3b2a1d; filter: drop-shadow(0 2px 1px rgb(0 0 0 / .45)); }
 .chess-piece-black { color: #17120e; -webkit-text-stroke: .5px #f4e5c8; filter: drop-shadow(0 2px 1px rgb(255 255 255 / .2)); }
 .chess-target { position: absolute; z-index: 3; width: 22%; aspect-ratio: 1; border-radius: 999px; background: rgb(24 24 20 / .35); }

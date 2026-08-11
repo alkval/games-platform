@@ -5,7 +5,7 @@ export type Difficulty = 'easy' | 'normal' | 'hard';
 type BotOptions = ConstructorParameters<typeof MCTSBot>[0];
 
 function botDelay(gameName?: string): number {
-  return gameName === 'war' ? 900 : gameName === 'mattis' ? 650 : 450;
+  return gameName === 'war' ? 900 : gameName === 'mattis' ? 1650 : 450;
 }
 
 async function holdForReveal(startedAt: number, delay: number): Promise<void> {
@@ -34,4 +34,3 @@ export class HardBot extends MCTSBot {
 export function practiceBot(difficulty: Difficulty) {
   return difficulty === 'easy' ? EasyBot : difficulty === 'normal' ? NormalBot : HardBot;
 }
-

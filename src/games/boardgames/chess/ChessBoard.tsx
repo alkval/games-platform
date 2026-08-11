@@ -47,7 +47,7 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
   }
 
   const status = gameover
-    ? gameover.draw ? 'Draw' : `${name(gameover.winner ?? '0')} wins`
+    ? gameover.draw ? 'Draw' : gameover.winner === playerID ? 'You win' : `${name(gameover.winner ?? '0')} wins`
     : chess.inCheck() ? `${chess.turn() === 'w' ? name('0') : name('1')} is in check`
     : `${chess.turn() === 'w' ? name('0') : name('1')} to move`;
 
@@ -70,17 +70,20 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
               return <button
                 key={square}
                 type="button"
-                draggable={canDrag}
                 className={`chess-square ${light ? 'chess-light' : 'chess-dark'} ${selected === square ? 'chess-selected' : ''} ${last ? 'chess-last' : ''}`}
                 onClick={() => choose(square)}
-                onDragStart={(event) => { if (!canDrag) return; event.dataTransfer.setData('text/plain', square); event.dataTransfer.effectAllowed = 'move'; setSelected(square); }}
                 onDragOver={(event) => { if (legalTargets.includes(square)) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } }}
                 onDrop={(event) => { event.preventDefault(); const from = event.dataTransfer.getData('text/plain') as Square; if (/^[a-h][1-8]$/.test(from)) attemptMove(from, square); }}
-                onDragEnd={() => setSelected(null)}
                 aria-label={`${square}${piece ? ` ${piece.color === 'w' ? 'white' : 'black'} ${piece.type}` : ''}`}
               >
                 {target && <span className={`chess-target ${piece ? 'chess-capture' : ''}`} />}
-                {piece && <span className={`chess-piece chess-piece-${piece.color === 'w' ? 'white' : 'black'}`} aria-hidden="true">{glyphs[piece.color][piece.type]}</span>}
+                {piece && <span
+                  className={`chess-piece chess-piece-${piece.color === 'w' ? 'white' : 'black'}`}
+                  draggable={canDrag}
+                  onDragStart={(event) => { if (!canDrag) return; event.dataTransfer.setData('text/plain', square); event.dataTransfer.effectAllowed = 'move'; setSelected(square); }}
+                  onDragEnd={() => setSelected(null)}
+                  aria-hidden="true"
+                >{glyphs[piece.color][piece.type]}</span>}
                 {file === orderedFiles[0] && <span className="chess-rank">{rank}</span>}
                 {rank === orderedRanks[orderedRanks.length - 1] && <span className="chess-file">{file}</span>}
               </button>;
