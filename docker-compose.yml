@@ -10,6 +10,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: file:/app/data/games.db
+      APP_REVISION: ${APP_REVISION:-unknown}
     volumes:
       - games_data:/app/data
     networks:

@@ -28,7 +28,7 @@ export function createExpressApp(): Express {
   app.use(cookieParser());
 
   app.get('/api/health', (_request, response) => {
-    response.json({ ok: true, service: 'alkval-games', time: new Date().toISOString() });
+    response.json({ ok: true, service: 'alkval-games', revision: env.APP_REVISION, time: new Date().toISOString() });
   });
 
   configureAuth(app);
