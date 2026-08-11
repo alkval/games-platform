@@ -1,0 +1,15 @@
+[Unit]
+Description=Deploy games.alkval.com from GitHub
+Wants=network-online.target
+After=network-online.target docker.service
+Requires=docker.service
+ConditionPathExists=/DATA/AppData/games-platform/.git
+
+[Service]
+Type=oneshot
+User=alkval
+WorkingDirectory=/DATA/AppData/games-platform
+ExecStart=/usr/bin/bash /DATA/AppData/games-platform/scripts/auto-deploy.sh
+TimeoutStartSec=20min
+UMask=0027
+NoNewPrivileges=true

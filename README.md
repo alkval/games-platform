@@ -112,3 +112,23 @@ docker compose up -d --build
 ```
 
 The container runs database migrations before starting the application. Its health check calls `/api/health`, it restarts unless stopped, and SQLite is stored in the `games_data` named volume.
+
+### Automatic deployment
+
+Production can poll the GitHub `main` branch every five minutes through the included systemd timer. A deployment runs only when the commit changes, allows only one deployment at a time, preserves the untracked production `.env` and Docker volume, waits for the replacement container to become healthy, and rolls back to the previous commit if the release fails.
+
+Install it once on the Pop!_OS host as the regular `alkval` user:
+
+```bash
+cd /DATA/AppData/games-platform
+bash scripts/install-autodeploy.sh
+```
+
+The installer requests `sudo` only when installing and enabling the two systemd units. After that, pushing to `main` is sufficient; no SSH key is needed by the development machine. Production source files are managed by Git after installation, so permanent server-specific values belong in the ignored `.env` file rather than tracked files.
+
+Useful status commands:
+
+```bash
+systemctl status games-platform-autodeploy.timer
+journalctl -u games-platform-autodeploy.service -n 50 --no-pager
+```
