@@ -3,6 +3,7 @@ import type { Prisma } from '@prisma/client';
 import { publicGames } from '../games/public-games.js';
 import { isAdminSession, readSession, type SessionClaims } from './auth.js';
 import { prisma } from './prisma.js';
+import { joinedPlayerCount, roomExpiresAt } from './room-cleanup.js';
 
 type StoredResult = { winner?: string; draw?: boolean };
 type Stat = { gameId: string; played: number; won: number; lost: number; draws: number };
@@ -67,7 +68,7 @@ export function configureApi(app: Express): void {
   app.get('/api/admin/overview', async (request, response, next) => {
     try {
       if (!await requireAdmin(request, response)) return;
-      const [users, matches, rooms] = await Promise.all([
+      const [users, matches, storedRooms] = await Promise.all([
         prisma.user.findMany({
           orderBy: { createdAt: 'desc' },
           select: {
@@ -94,9 +95,14 @@ export function configureApi(app: Express): void {
           where: { isGameover: false },
           orderBy: { updatedAt: 'desc' },
           take: 200,
-          select: { id: true, gameName: true, createdAt: true, updatedAt: true },
+          select: { id: true, gameName: true, createdAt: true, updatedAt: true, metadataJson: true },
         }),
       ]);
+      const rooms = storedRooms.map(({ metadataJson, ...room }) => ({
+        ...room,
+        joinedPlayers: joinedPlayerCount(metadataJson),
+        expiresAt: roomExpiresAt({ ...room, metadataJson }),
+      }));
       response.json({ users, matches, rooms });
     } catch (error) {
       next(error);

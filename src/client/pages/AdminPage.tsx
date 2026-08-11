@@ -23,6 +23,8 @@ interface AdminData {
     gameName: string;
     createdAt: string;
     updatedAt: string;
+    joinedPlayers: number;
+    expiresAt: string;
   }>;
 }
 
@@ -126,7 +128,7 @@ export function AdminPage() {
             <h2 className="text-2xl font-bold" id="rooms-heading">Active rooms</h2>
             {data.rooms.length ? <div className="admin-list mt-4">{data.rooms.map((room) => (
               <div className="admin-row" key={room.id}>
-                <div className="min-w-0"><p className="font-semibold">{publicGameName(room.gameName)}</p><p className="truncate text-sm text-stone-500">{room.id}</p><p className="mt-1 text-xs text-stone-500">Updated {formatDate(room.updatedAt)}</p></div>
+                <div className="min-w-0"><p className="font-semibold">{publicGameName(room.gameName)}</p><p className="truncate text-sm text-stone-500">{room.id}</p><p className="mt-1 text-xs text-stone-500">{room.joinedPlayers ? `${room.joinedPlayers} player${room.joinedPlayers === 1 ? '' : 's'} joined · last active ${formatDate(room.updatedAt)}` : `Waiting for players · created ${formatDate(room.createdAt)}`}</p><p className="mt-1 text-xs text-stone-500">Automatically removed {formatDate(room.expiresAt)}</p></div>
                 <button className="danger-button" disabled={Boolean(busy)} type="button" onClick={() => void remove('rooms', room.id, `this ${publicGameName(room.gameName)} room`)}>{busy === `rooms:${room.id}` ? 'Removing...' : 'Remove room'}</button>
               </div>
             ))}</div> : <p className="mt-4 text-stone-500">No active rooms.</p>}

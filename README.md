@@ -12,6 +12,7 @@ A self-hosted multiplayer card and board game platform for [games.alkval.com](ht
 - Private owner-only email data and public player profiles
 - Global and per-game leaderboards
 - Administrator-only account, match, and active-room management
+- Automatic cleanup of empty rooms after 24 hours and joined-but-abandoned rooms after 30 inactive days
 - Persistent online game state, completed matches, and player statistics
 - Light, dark, and system colour themes
 - Route-level code splitting so game implementations load only when needed
@@ -73,6 +74,8 @@ The `/admin` route and every `/api/admin/*` operation are restricted server-side
 - `PlayerStat`: per-user, per-game win/loss/draw totals
 
 Online matches survive container restarts. Practice matches are deliberately local and ephemeral.
+
+Created online rooms with no joined players expire after 24 hours. Rooms with at least one joined player expire after 30 days without any room activity. Cleanup runs when the server starts and once per hour thereafter; completed match history and leaderboard records are not affected. These durations are configurable through `EMPTY_ROOM_TTL_HOURS`, `STALE_ROOM_TTL_DAYS`, and `ROOM_CLEANUP_INTERVAL_MINUTES`.
 
 ## Local development
 

@@ -46,12 +46,13 @@ async function post(path, body) {
 }
 
 async function run() {
-  const [{ startServer }, { WarGame }, { MattisGame, canBeat }, { ChessGame }, { prisma }] = await Promise.all([
+  const [{ startServer }, { WarGame }, { MattisGame, canBeat }, { ChessGame }, { prisma }, { cleanupExpiredRooms }] = await Promise.all([
     import('../dist-server/server/server.js'),
     import('../dist-server/games/cardgames/war/game.js'),
     import('../dist-server/games/cardgames/mattis/game.js'),
     import('../dist-server/games/boardgames/chess/game.js'),
     import('../dist-server/server/prisma.js'),
+    import('../dist-server/server/room-cleanup.js'),
   ]);
 
   const stopServer = await startServer();
@@ -203,6 +204,20 @@ async function run() {
     assert.equal((await fetch(`${serverUrl}/api/admin/users/${statsUser.id}`, { method: 'DELETE', headers: adminHeaders })).status, 204);
     assert.equal(await prisma.user.findUnique({ where: { id: statsUser.id } }), null);
     console.log('Authorized administration protects the owner and keeps statistics consistent after deletions');
+
+    const staleDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
+    const recentDate = new Date();
+    const roomBase = { gameName: 'war', stateJson: '{}', initialStateJson: '{}', logJson: '[]' };
+    await prisma.gameState.createMany({ data: [
+      { ...roomBase, id: `expired-empty-${process.pid}`, metadataJson: JSON.stringify({ players: { 0: { id: 0 }, 1: { id: 1 } } }), createdAt: staleDate, updatedAt: recentDate },
+      { ...roomBase, id: `expired-joined-${process.pid}`, metadataJson: JSON.stringify({ players: { 0: { id: 0, name: 'Alice' }, 1: { id: 1 } } }), createdAt: staleDate, updatedAt: staleDate },
+      { ...roomBase, id: `recent-empty-${process.pid}`, metadataJson: JSON.stringify({ players: { 0: { id: 0 }, 1: { id: 1 } } }), createdAt: recentDate, updatedAt: recentDate },
+    ] });
+    assert.equal(await cleanupExpiredRooms(recentDate), 2);
+    assert.equal(await prisma.gameState.findUnique({ where: { id: `expired-empty-${process.pid}` } }), null);
+    assert.equal(await prisma.gameState.findUnique({ where: { id: `expired-joined-${process.pid}` } }), null);
+    assert.notEqual(await prisma.gameState.findUnique({ where: { id: `recent-empty-${process.pid}` } }), null);
+    console.log('Room cleanup removes expired empty and abandoned rooms while preserving recent rooms');
   } finally {
     clients.forEach((client) => client.stop());
     await new Promise((resolve) => setTimeout(resolve, 500));
