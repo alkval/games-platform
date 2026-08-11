@@ -12,8 +12,8 @@ export function SiteHeader() {
         <span>games</span>
       </Link>
       <nav className="flex items-center gap-4 text-sm">
-        <Link className="header-link" to="/practice">Vs computer</Link>
-        <Link className="header-link" to="/leaderboard">Leaderboard</Link>
+        <Link className="desktop-navigation-link header-link" to="/practice">Vs computer</Link>
+        <Link className="desktop-navigation-link header-link" to="/leaderboard">Leaderboard</Link>
         <ThemeToggle />
         {!loading && user ? (
           <div className="flex items-center gap-2">
@@ -34,6 +34,10 @@ export function SiteHeader() {
         ) : (
           <span className="text-xs text-stone-500">Guest mode</span>
         )}
+      </nav>
+      <nav className="mobile-navigation" aria-label="Mobile navigation">
+        <Link to="/practice">Vs computer</Link>
+        <Link to="/leaderboard">Leaderboard</Link>
       </nav>
     </header>
   );
