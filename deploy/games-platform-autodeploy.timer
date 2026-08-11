@@ -3,8 +3,8 @@ Description=Check GitHub for games.alkval.com updates
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=5min
-AccuracySec=30s
+OnUnitActiveSec=1min
+AccuracySec=10s
 Unit=games-platform-autodeploy.service
 
 [Install]
