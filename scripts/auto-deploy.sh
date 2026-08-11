@@ -37,7 +37,9 @@ healthcheck() {
 }
 
 deploy_current_checkout() {
-  docker compose up -d --build
+  local revision
+  revision="$(git rev-parse HEAD)"
+  APP_REVISION="$revision" docker compose up -d --build
   healthcheck
 }
 

@@ -117,6 +117,8 @@ The container runs database migrations before starting the application. Its heal
 
 Production can poll the GitHub `main` branch every five minutes through the included systemd timer. A deployment runs only when the commit changes, allows only one deployment at a time, preserves the untracked production `.env` and Docker volume, waits for the replacement container to become healthy, and rolls back to the previous commit if the release fails.
 
+The public `/api/health` response includes the deployed Git revision, allowing a release to be verified without server or SSH access.
+
 Install it once on the Pop!_OS host as the regular `alkval` user:
 
 ```bash

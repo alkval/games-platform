@@ -12,6 +12,7 @@ const envSchema = z.object({
   EMPTY_ROOM_TTL_HOURS: z.coerce.number().positive().default(24),
   STALE_ROOM_TTL_DAYS: z.coerce.number().positive().default(30),
   ROOM_CLEANUP_INTERVAL_MINUTES: z.coerce.number().positive().default(60),
+  APP_REVISION: z.string().default('unknown'),
 });
 
 export const env = envSchema.parse(process.env);
