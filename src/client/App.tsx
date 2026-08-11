@@ -12,6 +12,7 @@ const LeaderboardPage = lazy(() => import('./pages/LeaderboardPage').then((modul
 const PublicProfilePage = lazy(() => import('./pages/PublicProfilePage').then((module) => ({ default: module.PublicProfilePage })));
 const PracticePage = lazy(() => import('./pages/PracticePage').then((module) => ({ default: module.PracticePage })));
 const ProfilePage = lazy(() => import('./pages/ProfilePage').then((module) => ({ default: module.ProfilePage })));
+const AdminPage = lazy(() => import('./pages/AdminPage').then((module) => ({ default: module.AdminPage })));
 
 function PageLoading() {
   return <main className="page-shell text-stone-500">Loading...</main>;
@@ -33,6 +34,7 @@ export function App() {
           <Route path="/players/:playerId" element={<PublicProfilePage />} />
           <Route path="/practice" element={<PracticePage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/admin" element={<AdminPage />} />
         </Routes>
       </Suspense>
     </>
