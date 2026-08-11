@@ -13,6 +13,7 @@ import { configureAuth } from './auth.js';
 import { env } from './env.js';
 import { PrismaGameStorage } from './game-storage.js';
 import { prisma } from './prisma.js';
+import { cleanupExpiredRooms, startRoomCleanup } from './room-cleanup.js';
 
 const require = createRequire(import.meta.url);
 const { Server } = require('boardgame.io/server') as typeof import('boardgame.io/server');
@@ -85,6 +86,14 @@ export async function startServer(): Promise<() => Promise<void>> {
     apiOrigins: allowedOrigins,
   });
 
+  try {
+    const expiredRooms = await cleanupExpiredRooms();
+    if (expiredRooms) console.log(`Expired ${expiredRooms} abandoned game room${expiredRooms === 1 ? '' : 's'} on startup`);
+  } catch (error) {
+    console.error('Could not clean up expired game rooms on startup', error);
+  }
+  const stopRoomCleanup = startRoomCleanup();
+
   gameServer.app.use(async (context, next) => {
     if (context.path.startsWith('/api/')) {
       await passToExpress(expressApp, context);
@@ -102,6 +111,7 @@ export async function startServer(): Promise<() => Promise<void>> {
   });
 
   return async () => {
+    stopRoomCleanup();
     gameServer.kill(runningServers);
     await prisma.$disconnect();
   };
