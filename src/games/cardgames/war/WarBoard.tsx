@@ -48,7 +48,7 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
           </div>
         </header>
 
-        <section className="mt-8 grid gap-6 lg:grid-cols-[1fr_2fr_1fr]">
+        <section className="war-layout mt-8 grid gap-4 lg:grid-cols-[1fr_2fr_1fr] lg:gap-6">
           <aside className="score-panel">
             <p className="score-label">{playerName('0')}</p>
             <p className="score-number">{G.tricksWon['0']}</p>

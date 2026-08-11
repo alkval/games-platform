@@ -49,6 +49,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
   background: var(--paper);
   color: var(--ink);
   transition: background-color 180ms ease, color 180ms ease;
@@ -113,6 +114,10 @@ input:focus-visible {
   backdrop-filter: blur(12px);
 }
 
+.site-header nav {
+  min-width: 0;
+}
+
 .brand-lockup {
   display: inline-flex;
   align-items: center;
@@ -141,6 +146,7 @@ input:focus-visible {
   font-weight: 650;
   letter-spacing: 0.06em;
   text-transform: lowercase;
+  min-height: 2.75rem;
 }
 
 .theme-button:hover { color: var(--ink); }
@@ -242,7 +248,7 @@ input:focus-visible {
 .chess-dark { background: #9b6b45; }
 .chess-last { box-shadow: inset 0 0 0 999px rgb(245 188 66 / 0.38); }
 .chess-selected { box-shadow: inset 0 0 0 4px #d97706; }
-.chess-piece { position: relative; z-index: 2; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif; font-size: clamp(1.8rem, 7vw, 4.2rem); user-select: none; pointer-events: none; }
+.chess-piece { position: relative; z-index: 2; font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", serif; font-size: clamp(1.55rem, 10vw, 4.2rem); user-select: none; pointer-events: none; }
 .chess-piece-white { color: #fffdf7; -webkit-text-stroke: 1px #3b2a1d; filter: drop-shadow(0 2px 1px rgb(0 0 0 / .45)); }
 .chess-piece-black { color: #17120e; -webkit-text-stroke: .5px #f4e5c8; filter: drop-shadow(0 2px 1px rgb(255 255 255 / .2)); }
 .chess-target { position: absolute; z-index: 3; width: 22%; aspect-ratio: 1; border-radius: 999px; background: rgb(24 24 20 / .35); }
@@ -258,7 +264,7 @@ input:focus-visible {
 .leaderboard-head { color: var(--ink-muted); font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
 .practice-setup,.practice-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--rule); background: var(--surface); padding: 1rem max(1.5rem, calc((100vw - 72rem) / 2)); }
 .practice-bar { border-top: 1px solid var(--rule); }
-@media (max-width: 760px) { .leaderboard-table { overflow-x: auto; } .site-header nav { gap: .65rem; } .site-header .header-link { font-size: .75rem; } }
+@media (max-width: 760px) { .site-header nav { gap: .65rem; } .site-header .header-link { font-size: .75rem; } }
 
 .page-shell {
   width: min(100% - 3rem, 64rem);
@@ -515,6 +521,13 @@ input:focus-visible {
   gap: 0.35rem;
   padding: 0.75rem 0.25rem 1.5rem;
   scrollbar-color: #a7f3d0 transparent;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  touch-action: pan-x;
+}
+
+.card-hand .playing-card {
+  scroll-snap-align: start;
 }
 
 /* Tailwind utilities used by the screens inherit the same effective theme. */
@@ -552,6 +565,11 @@ input:focus-visible {
     display: none;
   }
 
+  .site-header .header-link:is(button) {
+    min-height: 2.75rem;
+    padding-inline: 0.25rem;
+  }
+
   .theme-label {
     display: none;
   }
@@ -565,6 +583,124 @@ input:focus-visible {
     padding-block: 2.5rem;
   }
 
+  .page-shell h1 {
+    overflow-wrap: anywhere;
+    font-size: clamp(2.5rem, 12vw, 3.75rem);
+    line-height: 1.02;
+  }
+
+  .portal-card {
+    min-height: 14rem;
+    border-radius: 1.15rem;
+    padding: 1.4rem;
+  }
+
+  .portal-mark {
+    right: -0.25rem;
+    font-size: 9rem;
+  }
+
+  .game-list-card,
+  .profile-panel {
+    padding: 1.15rem;
+  }
+
+  .profile-hero {
+    align-items: flex-start;
+  }
+
+  .profile-hero > div {
+    min-width: 0;
+  }
+
+  .profile-hero h1 {
+    overflow-wrap: anywhere;
+    font-size: 2.25rem;
+  }
+
+  .profile-hero-avatar {
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 1.1rem;
+  }
+
+  .practice-setup,
+  .practice-bar {
+    align-items: stretch;
+    padding: 0.85rem 1rem;
+  }
+
+  .practice-setup > *,
+  .practice-bar > * {
+    width: 100%;
+  }
+
+  .practice-setup [aria-label="Computer difficulty"] {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .practice-setup .primary-button,
+  .practice-setup .secondary-button {
+    min-width: 0;
+    padding-inline: 0.55rem;
+  }
+
+  .practice-bar .secondary-button {
+    width: 100%;
+  }
+
+  .chess-table {
+    padding-inline: 0.5rem;
+  }
+
+  .chess-board {
+    border-width: 4px;
+    border-radius: 0.35rem;
+  }
+
+  .chess-selected {
+    box-shadow: inset 0 0 0 3px #d97706;
+  }
+
+  .chess-capture {
+    border-width: 3px;
+  }
+
+  .promotion-picker {
+    max-width: 100%;
+    padding: 1rem;
+  }
+
+  .promotion-piece {
+    width: clamp(3rem, 15vw, 3.5rem);
+    height: clamp(3rem, 15vw, 3.5rem);
+    font-size: 2.2rem;
+  }
+
+  .score-panel {
+    padding: 1rem 0.65rem;
+  }
+
+  .score-number {
+    font-size: 2.75rem;
+  }
+
+  .playing-card-compact {
+    width: 4rem;
+    height: 5.75rem;
+  }
+
+  .mattis-player {
+    padding: 0.75rem;
+  }
+
+  .mattis-pickup-button,
+  .mattis-dare-button {
+    width: 100%;
+    min-height: 2.75rem;
+  }
+
   .playing-card {
     width: 4.5rem;
     height: 6.4rem;
@@ -572,6 +708,80 @@ input:focus-visible {
 
   .mattis-trick {
     justify-content: flex-start;
+  }
+
+  .leaderboard-table {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .leaderboard-head {
+    display: none;
+  }
+
+  .leaderboard-row:not(.leaderboard-head) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.6rem 1rem;
+    min-width: 0;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--rule);
+    border-radius: 0.9rem;
+    background: var(--surface);
+    padding: 1rem;
+  }
+
+  .leaderboard-row:not(.leaderboard-head) > :first-child {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .leaderboard-row:not(.leaderboard-head) > :nth-child(2) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .leaderboard-row:not(.leaderboard-head) > :nth-child(n + 3) {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.88rem;
+  }
+
+  .leaderboard-row:not(.leaderboard-head) > :nth-child(n + 3)::before {
+    content: attr(data-label);
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+}
+
+@media (max-width: 1023px) {
+  .war-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .war-layout > :nth-child(1) { order: 1; }
+  .war-layout > :nth-child(2) { order: 3; grid-column: 1 / -1; }
+  .war-layout > :nth-child(3) { order: 2; }
+}
+
+@media (max-width: 390px) {
+  .brand-lockup > span {
+    display: none;
+  }
+
+  .site-header {
+    gap: 0.5rem;
+  }
+
+  .site-header nav {
+    gap: 0.4rem;
+  }
+
+  .small-button {
+    padding-inline: 0.65rem;
+    font-size: 0.78rem;
   }
 }
 
