@@ -15,6 +15,7 @@ export interface MattisCard {
 export interface MattisPlay {
   playerID: string;
   card: MattisCard;
+  cards?: MattisCard[];
 }
 
 export interface MattisResult {
@@ -176,10 +177,62 @@ export function canBeat(card: MattisCard, top: MattisCard, trumpSuit: MattisSuit
   return card.suit === trumpSuit && top.suit !== trumpSuit;
 }
 
+export function isMattisSeries(cards: MattisCard[]): boolean {
+  if (cards.length < 2) return false;
+  const ordered = [...cards].sort((left, right) => left.rank - right.rank);
+  return ordered.every((card, index) => (
+    card.suit === ordered[0].suit
+    && (index === 0 || card.rank === ordered[index - 1].rank + 1)
+  ));
+}
+
+export function enumerateMattisSeries(hand: MattisCard[]): number[][] {
+  const groups = new Map<MattisSuit, Array<{ card: MattisCard; index: number }>>();
+  hand.forEach((card, index) => groups.set(card.suit, [...(groups.get(card.suit) ?? []), { card, index }]));
+  const series: number[][] = [];
+
+  for (const suited of groups.values()) {
+    suited.sort((left, right) => left.card.rank - right.card.rank);
+    for (let start = 0; start < suited.length - 1; start += 1) {
+      const indices = [suited[start].index];
+      for (let end = start + 1; end < suited.length; end += 1) {
+        if (suited[end].card.rank !== suited[end - 1].card.rank + 1) break;
+        indices.push(suited[end].index);
+        series.push([...indices]);
+      }
+    }
+  }
+
+  return series;
+}
+
 function markFinished(G: MattisState, playerID: string): void {
   if (G.hands[playerID].length === 0 && !G.mustPickUp[playerID] && !G.finishOrder.includes(playerID)) {
     G.finishOrder.push(playerID);
   }
+}
+
+export function playSheddingCards(G: MattisState, playerID: string, cardIndices: number[]): boolean {
+  if (G.phase !== 'shedding' || playerID !== G.activePlayer || G.mustPickUp[playerID]) return false;
+  const uniqueIndices = [...new Set(cardIndices)];
+  if (!uniqueIndices.length || uniqueIndices.length !== cardIndices.length) return false;
+  if (uniqueIndices.some((index) => !Number.isInteger(index) || index < 0 || index >= G.hands[playerID].length)) return false;
+
+  const cards = uniqueIndices.map((index) => G.hands[playerID][index]).sort((left, right) => left.rank - right.rank);
+  if (cards.length > 1 && !isMattisSeries(cards)) return false;
+  const top = G.trick.at(-1)?.card;
+  if (top && (!G.trumpSuit || !canBeat(cards[0], top, G.trumpSuit))) return false;
+
+  if (G.trick.length === 0) G.lastTrick = [];
+  [...uniqueIndices].sort((left, right) => right - left).forEach((index) => G.hands[playerID].splice(index, 1));
+  G.trick.push({ playerID, card: cards.at(-1)!, ...(cards.length > 1 ? { cards } : {}) });
+  G.status = cards.length > 1
+    ? `Player ${Number(playerID) + 1} played a ${cards.length}-card series.`
+    : `Player ${Number(playerID) + 1} played ${cards[0].label}.`;
+  syncCounts(G);
+  markFinished(G, playerID);
+  advanceShedding(G, playerID, G.trick.length >= G.trickTarget);
+  return true;
 }
 
 function advanceShedding(G: MattisState, playerID: string, completedTrick: boolean): void {
@@ -267,16 +320,10 @@ export const MattisGame: Game<MattisState> = {
         return;
       }
 
-      const top = G.trick.at(-1)?.card;
-      if (top && (!G.trumpSuit || !canBeat(card, top, G.trumpSuit))) return INVALID_MOVE;
-      if (G.mustPickUp[playerID]) return INVALID_MOVE;
-
-      if (G.trick.length === 0) G.lastTrick = [];
-      hand.splice(cardIndex, 1);
-      G.trick.push({ playerID, card });
-      syncCounts(G);
-      markFinished(G, playerID);
-      advanceShedding(G, playerID, G.trick.length >= G.trickTarget);
+      if (!playSheddingCards(G, playerID, [cardIndex])) return INVALID_MOVE;
+    },
+    playSeries: ({ G, playerID }, cardIndices: number[]) => {
+      if (!Array.isArray(cardIndices) || cardIndices.length < 2 || !playSheddingCards(G, playerID, cardIndices)) return INVALID_MOVE;
     },
     drawBlind: ({ G, playerID }) => {
       if (G.phase !== 'collecting' || playerID !== G.activePlayer || G.stock.length <= 1) return INVALID_MOVE;
@@ -286,7 +333,7 @@ export const MattisGame: Game<MattisState> = {
     pickUpOldest: ({ G, playerID }) => {
       if (G.phase !== 'shedding' || playerID !== G.activePlayer || G.trick.length === 0) return INVALID_MOVE;
       const [oldest] = G.trick.splice(0, 1);
-      G.hands[playerID].push(oldest.card);
+      G.hands[playerID].push(...(oldest.cards ?? [oldest.card]));
       G.mustPickUp[playerID] = false;
       syncCounts(G);
 
@@ -326,7 +373,15 @@ export const MattisGame: Game<MattisState> = {
             .map((card, index) => ({ card, index }))
             .filter(({ card }) => !top || Boolean(G.trumpSuit && canBeat(card, top, G.trumpSuit)))
             .map(({ index }) => ({ move: 'playCard', args: [index] }));
-      return legal.length ? legal : [{ move: 'pickUpOldest' }];
+      const series = G.mustPickUp[playerID]
+        ? []
+        : enumerateMattisSeries(G.hands[playerID])
+            .filter((indices) => {
+              const lowest = indices.map((index) => G.hands[playerID][index]).sort((left, right) => left.rank - right.rank)[0];
+              return !top || Boolean(G.trumpSuit && canBeat(lowest, top, G.trumpSuit));
+            })
+            .map((indices) => ({ move: 'playSeries', args: [indices] }));
+      return legal.length || series.length ? [...legal, ...series] : [{ move: 'pickUpOldest' }];
     },
   },
   playerView: ({ G, playerID }) => ({

@@ -1,7 +1,8 @@
 import type { BoardProps } from 'boardgame.io/react';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import type { MattisCard, MattisState, MattisSuit } from './game';
-import { canBeat } from './game';
+import { canBeat, isMattisSeries } from './game';
 
 const suitSymbols: Record<MattisSuit, string> = {
   clubs: '\u2663',
@@ -24,17 +25,18 @@ const suitOrder: Record<MattisSuit, number> = {
   spades: 3,
 };
 
-function PlayingCard({ card, disabled, onClick, compact = false }: {
+function PlayingCard({ card, disabled, onClick, compact = false, selected = false }: {
   card: MattisCard;
   disabled?: boolean;
   onClick?: () => void;
   compact?: boolean;
+  selected?: boolean;
 }) {
   const red = card.suit === 'diamonds' || card.suit === 'hearts';
   return (
     <motion.button
       type="button"
-      className={`playing-card ${red ? 'playing-card-red' : ''} ${compact ? 'playing-card-compact' : ''}`}
+      className={`playing-card ${red ? 'playing-card-red' : ''} ${compact ? 'playing-card-compact' : ''} ${selected ? 'playing-card-selected' : ''}`}
       disabled={disabled}
       onClick={onClick}
       whileHover={disabled ? undefined : { y: -8 }}
@@ -49,9 +51,10 @@ function PlayingCard({ card, disabled, onClick, compact = false }: {
 
 export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, matchData }: BoardProps<MattisState>) {
   const hand = playerID ? G.hands[playerID] ?? [] : [];
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const sortedHand = hand
     .map((card, originalIndex) => ({ card, originalIndex }))
-    .sort((left, right) => left.card.rank - right.card.rank || suitOrder[left.card.suit] - suitOrder[right.card.suit]);
+    .sort((left, right) => suitOrder[left.card.suit] - suitOrder[right.card.suit] || left.card.rank - right.card.rank);
   const gameover = ctx.gameover as { winner: string; loser: string } | undefined;
   const allSeatsFilled = Boolean(matchData?.length) && matchData!.every((player) => Boolean(player.name));
   const playerName = (id: string) => matchData?.find((player) => String(player.id) === id)?.name ?? `Player ${Number(id) + 1}`;
@@ -59,11 +62,30 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
   const lastTrick = G.lastTrick ?? [];
   const visibleTrick = G.trick.length ? G.trick : lastTrick;
   const canAct = Boolean(playerID && isActive && G.activePlayer === playerID && allSeatsFilled && !gameover);
+  const selectedEntries = sortedHand.filter(({ card }) => selectedIds.includes(card.id));
+  const selectedCards = selectedEntries.map(({ card }) => card).sort((left, right) => left.rank - right.rank);
+  const validSelection = selectedCards.length === 1 || isMattisSeries(selectedCards);
+  const selectionBeatsTable = Boolean(selectedCards.length && (!top || (G.trumpSuit && canBeat(selectedCards[0], top, G.trumpSuit))));
+  const canPlaySelection = Boolean(canAct && G.phase === 'shedding' && !G.mustPickUp[playerID ?? ''] && validSelection && selectionBeatsTable);
   const legalCard = (card: MattisCard) => {
     if (G.phase === 'collecting') return true;
     if (G.mustPickUp[playerID ?? '']) return false;
     return !top || Boolean(G.trumpSuit && canBeat(card, top, G.trumpSuit));
   };
+
+  useEffect(() => setSelectedIds([]), [G.activePlayer, G.phase, G.round]);
+
+  function toggleSelected(card: MattisCard): void {
+    setSelectedIds((current) => current.includes(card.id) ? current.filter((id) => id !== card.id) : [...current, card.id]);
+  }
+
+  function playSelection(): void {
+    if (!canPlaySelection) return;
+    const indices = selectedEntries.map(({ originalIndex }) => originalIndex);
+    if (indices.length === 1) moves.playCard(indices[0]);
+    else moves.playSeries(indices);
+    setSelectedIds([]);
+  }
 
   if (!allSeatsFilled) {
     const joined = matchData?.filter((player) => player.name).length ?? 1;
@@ -125,7 +147,9 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
             {visibleTrick.length ? visibleTrick.map((play, index) => (
               <div className="mattis-trick-card" key={`${play.card.id}-${index}`}>
                 <p className="mb-2 max-w-24 truncate text-xs text-emerald-100/70">{playerName(play.playerID)}</p>
-                <PlayingCard card={play.card} disabled compact />
+                <div className="mattis-play-stack">
+                  {(play.cards ?? [play.card]).map((card) => <PlayingCard card={card} disabled compact key={card.id} />)}
+                </div>
                 {G.phase === 'shedding' && index === 0 && <span className="mt-2 block text-[0.68rem] uppercase tracking-wider text-amber-200">picked up first</span>}
               </div>
             )) : (
@@ -158,13 +182,23 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
                 Dare: play blind from stock
               </button>
             )}
+            {canAct && G.phase === 'shedding' && (
+              <div className="mattis-selection-bar">
+                <p>{selectedCards.length ? `${selectedCards.length} card${selectedCards.length === 1 ? '' : 's'} selected` : 'Select one card or a consecutive same-suit series'}</p>
+                <div className="flex gap-2">
+                  {selectedCards.length > 0 && <button className="secondary-button" type="button" onClick={() => setSelectedIds([])}>Clear</button>}
+                  <button className="primary-button" type="button" disabled={!canPlaySelection} onClick={playSelection}>Play selected</button>
+                </div>
+              </div>
+            )}
             <div className="card-hand">
               {sortedHand.map(({ card, originalIndex }) => (
                 <PlayingCard
                   key={card.id}
                   card={card}
-                  disabled={!canAct || !legalCard(card)}
-                  onClick={() => moves.playCard(originalIndex)}
+                  selected={selectedIds.includes(card.id)}
+                  disabled={!canAct || (G.phase === 'collecting' ? !legalCard(card) : Boolean(G.mustPickUp[playerID ?? '']))}
+                  onClick={() => G.phase === 'collecting' ? moves.playCard(originalIndex) : toggleSelected(card)}
                 />
               ))}
             </div>

@@ -5,8 +5,11 @@ import {
   canBeat,
   createInitialMattisState,
   createMattisDeck,
+  enumerateMattisSeries,
   getMattisResult,
+  isMattisSeries,
   MattisGame,
+  playSheddingCards,
   resolveCollectingContest,
   type MattisCard,
   type MattisState,
@@ -69,6 +72,33 @@ describe('Mattis game', () => {
     expect(canBeat(card(8, 'hearts'), card(9, 'hearts'), 'spades')).toBe(false);
     expect(canBeat(card(2, 'spades'), card(14, 'hearts'), 'spades')).toBe(true);
     expect(canBeat(card(14, 'clubs'), card(2, 'spades'), 'spades')).toBe(false);
+  });
+
+  it('recognises and plays a consecutive same-suit series as one turn', () => {
+    const series = [card(7, 'hearts'), card(8, 'hearts'), card(9, 'hearts')];
+    expect(isMattisSeries(series)).toBe(true);
+    expect(isMattisSeries([card(7, 'hearts'), card(9, 'hearts')])).toBe(false);
+    expect(isMattisSeries([card(7, 'hearts'), card(8, 'clubs')])).toBe(false);
+
+    const state = createInitialMattisState(createMattisDeck(), 3);
+    state.phase = 'shedding';
+    state.activePlayer = '0';
+    state.trumpSuit = 'spades';
+    state.hands['0'] = series;
+    state.handCounts['0'] = series.length;
+    state.trick = [{ playerID: '2', card: card(6, 'hearts') }];
+    state.trickTarget = 3;
+
+    expect(playSheddingCards(state, '0', [0, 1, 2])).toBe(true);
+    expect(state.hands['0']).toEqual([]);
+    expect(state.trick).toHaveLength(2);
+    expect(state.trick[1].cards?.map((entry) => entry.rank)).toEqual([7, 8, 9]);
+    expect(state.trick[1].card.rank).toBe(9);
+  });
+
+  it('enumerates every consecutive same-suit series for computer players', () => {
+    const hand = [card(5, 'clubs'), card(6, 'clubs'), card(7, 'clubs'), card(8, 'hearts')];
+    expect(enumerateMattisSeries(hand)).toEqual([[0, 1], [0, 1, 2], [1, 2]]);
   });
 
   it('returns an incomplete trick and exposes trump when phase two begins', () => {

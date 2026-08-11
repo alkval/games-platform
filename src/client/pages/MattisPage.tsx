@@ -129,7 +129,7 @@ export function MattisPage() {
           </ol>
           <details className="mattis-rules mt-7">
             <summary>Rules used on this site</summary>
-            <p>This is the all-player first-phase variant documented by Pagat, with the Norwegian two-player setup from KortRegler.no and single-card play in phase two. Ten unseen cards are removed for two players; the optional sequence rule is not used.</p>
+            <p>This is the all-player first-phase variant documented by Pagat, with the Norwegian two-player setup from KortRegler.no. In phase two you may play one card or a consecutive series in the same suit. Ten unseen cards are removed for two players.</p>
             <p><a href="https://www.pagat.com/beating/skitgubbe.html#mattis" target="_blank" rel="noreferrer noopener">Pagat rules</a> &middot; <a href="https://kortregler.no/mattis/" target="_blank" rel="noreferrer noopener">KortRegler.no</a></p>
           </details>
         </div>

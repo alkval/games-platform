@@ -441,6 +441,16 @@ input:focus-visible {
   flex: 0 0 auto;
 }
 
+.mattis-play-stack {
+  display: flex;
+  align-items: flex-start;
+}
+
+.mattis-play-stack .playing-card + .playing-card {
+  margin-left: -3rem;
+  transform: translateY(0.45rem);
+}
+
 .playing-card-compact {
   width: 4.5rem;
   height: 6.4rem;
@@ -454,6 +464,16 @@ input:focus-visible {
   padding: 0.55rem 1rem;
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.mattis-selection-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.4rem;
+  color: #d1fae5;
+  font-size: 0.85rem;
 }
 
 .mattis-pickup-button {
@@ -519,6 +539,12 @@ input:focus-visible {
 
 .playing-card:disabled {
   cursor: default;
+}
+
+.playing-card-selected {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgb(251 191 36 / 0.65), 0 10px 18px rgb(0 0 0 / 0.28);
+  transform: translateY(-8px);
 }
 
 .card-hand {
@@ -737,6 +763,16 @@ input:focus-visible {
   .mattis-dare-button {
     width: 100%;
     min-height: 2.75rem;
+  }
+
+  .mattis-selection-bar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mattis-selection-bar > div,
+  .mattis-selection-bar button {
+    flex: 1;
   }
 
   .playing-card {
