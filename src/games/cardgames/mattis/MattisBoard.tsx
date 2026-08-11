@@ -51,7 +51,7 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
   const hand = playerID ? G.hands[playerID] ?? [] : [];
   const sortedHand = hand
     .map((card, originalIndex) => ({ card, originalIndex }))
-    .sort((left, right) => suitOrder[left.card.suit] - suitOrder[right.card.suit] || left.card.rank - right.card.rank);
+    .sort((left, right) => left.card.rank - right.card.rank || suitOrder[left.card.suit] - suitOrder[right.card.suit]);
   const gameover = ctx.gameover as { winner: string; loser: string } | undefined;
   const allSeatsFilled = Boolean(matchData?.length) && matchData!.every((player) => Boolean(player.name));
   const playerName = (id: string) => matchData?.find((player) => String(player.id) === id)?.name ?? `Player ${Number(id) + 1}`;

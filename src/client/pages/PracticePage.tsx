@@ -30,6 +30,7 @@ function PracticeTable({ gameId, difficulty, numPlayers }: { gameId: string; dif
     return Client({
       game: definition.game,
       board: NamedBoard,
+      numPlayers,
       multiplayer: Local({ bots }),
       debug: false,
     });
@@ -41,7 +42,7 @@ function PracticeTable({ gameId, difficulty, numPlayers }: { gameId: string; dif
         <div><b>You</b> vs <b>Computer</b><span className="ml-2 text-stone-500">({difficulty})</span></div>
         <button className="secondary-button" type="button" onClick={() => setRound((value) => value + 1)}>New game</button>
       </div>
-      <PracticeClient key={round} matchID={`practice-${gameId}-${difficulty}-${numPlayers}-${round}`} playerID="0" numPlayers={numPlayers} />
+      <PracticeClient key={round} matchID={`practice-${gameId}-${difficulty}-${numPlayers}-${round}`} playerID="0" />
     </div>
   );
 }
