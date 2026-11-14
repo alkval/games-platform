@@ -59,7 +59,7 @@ Each game registers metadata, a boardgame.io rules object, a React board, player
 
 ## Authentication and privacy
 
-Google sign-in requests the `profile` and `email` scopes. A seven-day HTTP-only, secure, SameSite=Lax JWT cookie holds the web session. A separate six-hour game token associates a signed-in user with a multiplayer seat.
+Google sign-in requests the `profile` and `email` scopes. A seven-day HTTP-only, secure, SameSite=Lax JWT cookie holds the web session. A separate six-hour game token, which carries no profile data, associates a signed-in user with a multiplayer seat. The server verifies it when the seat is joined, records the link in `SeatClaim`, and strips the token before saving the room, because boardgame.io publishes everything in a player's lobby metadata.
 
 Emails are returned only from the signed-in owner's private profile endpoint. Public leaderboards and profiles expose display name, avatar, join date, and game statistics only.
 
@@ -69,6 +69,7 @@ The `/admin` route and every `/api/admin/*` operation are restricted server-side
 
 - `User`: Google identity, private email, display name, avatar
 - `GameState`: serialized active state, metadata, and move log
+- `SeatClaim`: which signed-in account holds which seat in a room; never sent to clients
 - `Match`: permanent completed-game summary
 - `MatchPlayer`: each participant's score and placement
 - `PlayerStat`: per-user, per-game win/loss/draw totals

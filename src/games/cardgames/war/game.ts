@@ -26,6 +26,8 @@ export interface WarState {
   ties: number;
   round: number;
   lastResult: string;
+  /** Who plays first in the current trick. Optional so rooms started before this field keep working. */
+  leader?: string;
 }
 
 const suits: Suit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
@@ -46,12 +48,16 @@ export function resolveTrick(state: WarState): void {
   if (state.currentTrick.length !== 2) return;
 
   const [first, second] = state.currentTrick;
+  // The second card is played with the first one in view, so the lead must change hands:
+  // the trick winner leads next, and a tie passes the lead to the other player.
   if (first.card.rank === second.card.rank) {
+    state.leader = second.playerID;
     state.ties += 1;
     state.lastResult = `Both players drew ${first.card.label}. No trick awarded.`;
   } else {
     const winner = first.card.rank > second.card.rank ? first : second;
     state.tricksWon[winner.playerID] += 1;
+    state.leader = winner.playerID;
     state.lastResult = `Player ${Number(winner.playerID) + 1} won with ${winner.card.label}.`;
   }
 
@@ -94,6 +100,7 @@ export const WarGame: Game<WarState> = {
       ties: 0,
       round: 1,
       lastResult: 'Player 1 starts.',
+      leader: '0',
     };
   },
   moves: {
@@ -113,6 +120,10 @@ export const WarGame: Game<WarState> = {
   turn: {
     minMoves: 1,
     maxMoves: 1,
+    order: {
+      first: () => 0,
+      next: ({ G, ctx }) => (G.currentTrick.length === 1 ? 1 - Number(ctx.currentPlayer) : Number(G.leader ?? '0')),
+    },
   },
   endIf: ({ G }) => {
     const handsAreEmpty = G.handCounts['0'] === 0 && G.handCounts['1'] === 0;

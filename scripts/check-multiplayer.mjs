@@ -148,7 +148,23 @@ async function run() {
     console.log(`Mattis match ${mattisRoom.matchID} completed and was saved`);
 
     const chessRoom = await post('/games/chess/create', { numPlayers: 2 });
-    const chessFirst = await post(`/games/chess/${chessRoom.matchID}/join`, { playerID: '0', playerName: 'Alice' });
+    const seatEmail = `seat-${process.pid}@example.test`;
+    const seatUser = await prisma.user.create({ data: { googleId: `seat-${process.pid}`, email: seatEmail, displayName: 'Seat Test Player' } });
+    const seatToken = await new SignJWT({})
+      .setProtectedHeader({ alg: 'HS256' })
+      .setSubject(seatUser.id)
+      .setIssuer('games.alkval.com')
+      .setAudience('game')
+      .setIssuedAt()
+      .setExpirationTime('10m')
+      .sign(new TextEncoder().encode(process.env.AUTH_SECRET));
+    const chessFirst = await post(`/games/chess/${chessRoom.matchID}/join`, { playerID: '0', playerName: 'Alice', data: { gameToken: seatToken } });
+    for (const path of ['/games/chess', `/games/chess/${chessRoom.matchID}`]) {
+      const body = await (await fetch(`${serverUrl}${path}`)).text();
+      assert.equal(body.includes('gameToken') || body.includes(seatToken), false, `Public lobby endpoint ${path} exposed an account token`);
+    }
+    assert.equal((await prisma.seatClaim.findUnique({ where: { matchId_playerId: { matchId: chessRoom.matchID, playerId: '0' } } }))?.userId, seatUser.id, 'The signed-in seat was not claimed');
+    console.log('Signed-in seats are claimed server-side and the public lobby does not expose account tokens');
     const chessSecond = await post(`/games/chess/${chessRoom.matchID}/join`, { playerID: '1', playerName: 'Bob' });
     const chessClients = [chessFirst, chessSecond].map((joined, playerID) => Client({ game: ChessGame, multiplayer: SocketIO({ server: serverUrl }), matchID: chessRoom.matchID, playerID: String(playerID), credentials: joined.playerCredentials }));
     clients.push(...chessClients);
@@ -161,6 +177,8 @@ async function run() {
     }
     await waitFor(() => chessClients[0].getState()?.ctx.gameover?.winner === '1', 'Chess checkmate was not detected');
     await waitFor(async () => (await (await fetch(`${serverUrl}/api/matches/recent?game=chess`)).json()).some((match) => match.id === chessRoom.matchID), 'Completed chess match was not saved');
+    await waitFor(async () => (await prisma.playerStat.findUnique({ where: { userId_gameId: { userId: seatUser.id, gameId: 'chess' } } }))?.lost === 1, 'The signed-in player did not get the result on their statistics');
+    await prisma.user.delete({ where: { id: seatUser.id } });
     console.log(`Chess match ${chessRoom.matchID} completed and was saved`);
 
     const privateEmail = `private-${process.pid}@example.test`;

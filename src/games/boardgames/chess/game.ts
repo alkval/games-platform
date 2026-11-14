@@ -8,6 +8,13 @@ export interface ChessState {
   history: string[];
   lastMove: { from: string; to: string } | null;
   resigned: string | null;
+  /** How often each position has occurred. Optional so rooms started before this field keep working. */
+  positions?: Record<string, number>;
+}
+
+/** A position for repetition purposes: pieces, side to move, castling rights and en passant square. */
+export function positionKey(fen: string): string {
+  return fen.split(' ').slice(0, 4).join(' ');
 }
 
 export function getChessResult(state: ChessState) {
@@ -17,6 +24,8 @@ export function getChessResult(state: ChessState) {
   }
 
   const chess = new Chess(state.fen);
+  // chess.js rebuilt from a FEN has no move history, so repetition is counted in the game state.
+  if ((state.positions?.[positionKey(state.fen)] ?? 0) >= 3) return { draw: true, scores: { '0': 0, '1': 0 } };
   if (chess.isCheckmate()) {
     const winner = chess.turn() === 'w' ? '1' : '0';
     return { winner, scores: { '0': winner === '0' ? 1 : 0, '1': winner === '1' ? 1 : 0 } };
@@ -29,7 +38,10 @@ export const ChessGame: Game<ChessState> = {
   name: 'chess',
   minPlayers: 2,
   maxPlayers: 2,
-  setup: () => ({ fen: new Chess().fen(), history: [], lastMove: null, resigned: null }),
+  setup: () => {
+    const fen = new Chess().fen();
+    return { fen, history: [], lastMove: null, resigned: null, positions: { [positionKey(fen)]: 1 } };
+  },
   moves: {
     makeMove: ({ G, playerID }, from: string, to: string, promotion = 'q') => {
       const chess = new Chess(G.fen);
@@ -38,6 +50,8 @@ export const ChessGame: Game<ChessState> = {
       try {
         const move = chess.move({ from, to, promotion });
         G.fen = chess.fen();
+        G.positions ??= {};
+        G.positions[positionKey(G.fen)] = (G.positions[positionKey(G.fen)] ?? 0) + 1;
         G.history.push(move.san);
         G.lastMove = { from, to };
       } catch {

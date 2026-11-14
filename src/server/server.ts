@@ -11,7 +11,7 @@ import { ChessGame } from '../games/boardgames/chess/game.js';
 import { configureApi } from './api.js';
 import { configureAuth } from './auth.js';
 import { env } from './env.js';
-import { PrismaGameStorage } from './game-storage.js';
+import { PrismaGameStorage, scrubStoredGameTokens } from './game-storage.js';
 import { prisma } from './prisma.js';
 import { cleanupExpiredRooms, startRoomCleanup } from './room-cleanup.js';
 
@@ -91,6 +91,12 @@ export async function startServer(): Promise<() => Promise<void>> {
     if (expiredRooms) console.log(`Expired ${expiredRooms} abandoned game room${expiredRooms === 1 ? '' : 's'} on startup`);
   } catch (error) {
     console.error('Could not clean up expired game rooms on startup', error);
+  }
+  try {
+    const scrubbed = await scrubStoredGameTokens();
+    if (scrubbed) console.log(`Moved account tokens out of ${scrubbed} stored room${scrubbed === 1 ? '' : 's'}`);
+  } catch (error) {
+    console.error('Could not move stored account tokens out of room metadata', error);
   }
   const stopRoomCleanup = startRoomCleanup();
 

@@ -21,11 +21,12 @@ export function isAdminSession(session: SessionClaims | null): boolean {
 }
 
 async function createToken(claims: SessionClaims, audience: 'web' | 'game'): Promise<string> {
-  return new SignJWT({
+  // The game token only proves which account is joining a seat, so it carries no profile data.
+  return new SignJWT(audience === 'web' ? {
     email: claims.email,
     displayName: claims.displayName,
     avatarUrl: claims.avatarUrl,
-  })
+  } : {})
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(claims.userId)
     .setIssuer('games.alkval.com')
@@ -60,13 +61,15 @@ export async function readSession(request: Request): Promise<SessionClaims | nul
   }
 }
 
-export async function verifyGameToken(token: unknown): Promise<string | null> {
+export async function verifyGameToken(token: unknown, options: { ignoreExpiry?: boolean } = {}): Promise<string | null> {
   if (typeof token !== 'string') return null;
 
   try {
     const { payload } = await jwtVerify(token, signingKey, {
       issuer: 'games.alkval.com',
       audience: 'game',
+      // Only used to migrate tokens that older versions stored with a room.
+      ...(options.ignoreExpiry ? { currentDate: new Date(0) } : {}),
     });
     return payload.sub ?? null;
   } catch {

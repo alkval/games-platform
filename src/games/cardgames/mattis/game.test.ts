@@ -153,4 +153,47 @@ describe('Mattis game', () => {
     client.stop();
     expect(finalState.ctx.gameover).toMatchObject({ winner: expect.any(String), loser: expect.any(String) });
   });
+
+  it('passes the lead on when the next player has no cards and nothing to pick up', () => {
+    const G = createInitialMattisState(createMattisDeck(), 3);
+    G.stock = [];
+    G.hands = { '0': [card(5)], '1': [], '2': [card(7, 'hearts')] };
+    G.trumpIndicator = card(2, 'spades');
+    G.trumpOwner = '2';
+    beginSheddingPhase(G);
+    expect(G.mustPickUp).toEqual({ '0': false, '1': true, '2': false });
+
+    // Player 1 sheds their last card and the trick clears. Player 2 would lead next,
+    // but holds nothing and has nothing to pick up, so the lead goes to player 3.
+    G.activePlayer = '0';
+    G.trickTarget = 1;
+    expect(playSheddingCards(G, '0', [0])).toBe(true);
+    expect(G.finishOrder).toEqual(['0']);
+    expect(G.trick).toEqual([]);
+    expect(G.activePlayer).toBe('2');
+    expect(G.leader).toBe('2');
+  });
+
+  it('never leaves the active player without a legal move in six-player games', () => {
+    for (let seed = 0; seed < 60; seed += 1) {
+      let random = seed + 1;
+      const pick = (count: number) => {
+        random = (random * 1103515245 + 12345) % 2147483648;
+        return Math.floor(random / 2147483648 * count);
+      };
+      const client = Client({ game: { ...MattisGame, playerView: undefined, seed: `six-${seed}` }, numPlayers: 6 });
+      client.start();
+      for (let step = 0; step < 4000 && !client.getState()!.ctx.gameover; step += 1) {
+        const state = client.getState()!;
+        const player = state.ctx.currentPlayer;
+        const options = MattisGame.ai!.enumerate(state.G, state.ctx, player) as Array<{ move: string; args?: unknown[] }>;
+        const choice = options[pick(options.length)];
+        client.updatePlayerID(player);
+        (client.moves as Record<string, (...args: unknown[]) => void>)[choice.move](...(choice.args ?? []));
+        expect(client.getState()!._stateID, `seed ${seed}, step ${step}: "${choice.move}" was rejected`).toBeGreaterThan(state._stateID);
+      }
+      expect(client.getState()!.ctx.gameover, `seed ${seed} did not finish`).toBeDefined();
+      client.stop();
+    }
+  });
 });
