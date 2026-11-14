@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createDeck, getWarResult, resolveTrick, type WarState } from './game';
+import { Client } from 'boardgame.io/client';
+import { createDeck, getWarResult, resolveTrick, WarGame, type WarState } from './game';
 
 function stateWithRanks(first: number, second: number): WarState {
   const deck = createDeck();
@@ -46,5 +47,36 @@ describe('War game', () => {
     const state = stateWithRanks(2, 3);
     state.tricksWon = { '0': 9, '1': 14 };
     expect(getWarResult(state).winner).toBe('1');
+  });
+
+  it('gives the next lead to the trick winner, and to the other player after a tie', () => {
+    const won = stateWithRanks(14, 10);
+    resolveTrick(won);
+    expect(won.leader).toBe('0');
+
+    const lost = stateWithRanks(3, 10);
+    resolveTrick(lost);
+    expect(lost.leader).toBe('1');
+
+    const tied = stateWithRanks(8, 8);
+    resolveTrick(tied);
+    expect(tied.leader).toBe('1');
+  });
+
+  it('lets both seats lead tricks over a full game', () => {
+    const client = Client({ game: { ...WarGame, playerView: undefined, seed: 'lead-order' }, numPlayers: 2 });
+    client.start();
+    const leaders = new Set<string>();
+    for (let move = 0; move < 52; move += 1) {
+      const state = client.getState()!;
+      if (state.G.currentTrick.length === 0) {
+        leaders.add(state.ctx.currentPlayer);
+        expect(state.ctx.currentPlayer).toBe(state.G.leader);
+      }
+      client.updatePlayerID(state.ctx.currentPlayer);
+      client.moves.playCard(0);
+    }
+    expect(client.getState()?.ctx.gameover).toBeDefined();
+    expect(leaders).toEqual(new Set(['0', '1']));
   });
 });

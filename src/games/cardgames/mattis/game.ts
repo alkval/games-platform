@@ -235,6 +235,20 @@ export function playSheddingCards(G: MattisState, playerID: string, cardIndices:
   return true;
 }
 
+/**
+ * A player who entered the shedding phase without cards must first pick up from the
+ * table. With an empty table there is nothing to pick up and nothing to lead, so the
+ * lead passes on; they pick up at their first turn with cards on the table.
+ */
+function skipPlayersWhoCannotLead(G: MattisState): void {
+  if (G.trick.length) return;
+  for (let step = 0; step < G.playerIDs.length; step += 1) {
+    const id = G.activePlayer;
+    if (!(G.mustPickUp[id] && G.hands[id].length === 0)) return;
+    G.activePlayer = nextRemainingPlayer(G, id);
+  }
+}
+
 function advanceShedding(G: MattisState, playerID: string, completedTrick: boolean): void {
   const remaining = G.playerIDs.filter((id) => !G.finishOrder.includes(id));
   if (remaining.length <= 1) return;
@@ -244,6 +258,7 @@ function advanceShedding(G: MattisState, playerID: string, completedTrick: boole
     G.trick = [];
     G.round += 1;
     G.activePlayer = G.finishOrder.includes(playerID) ? nextRemainingPlayer(G, playerID) : playerID;
+    skipPlayersWhoCannotLead(G);
     G.leader = G.activePlayer;
     G.trickTarget = remaining.length;
     G.status = `Trick cleared. Player ${Number(G.activePlayer) + 1} leads.`;
@@ -251,6 +266,7 @@ function advanceShedding(G: MattisState, playerID: string, completedTrick: boole
   }
 
   G.activePlayer = nextRemainingPlayer(G, playerID);
+  skipPlayersWhoCannotLead(G);
 }
 
 export function getMattisResult(G: MattisState): MattisResult | undefined {

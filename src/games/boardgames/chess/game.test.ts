@@ -30,4 +30,15 @@ describe('ChessGame', () => {
   it('recognises a drawn position', () => {
     expect(getChessResult({ fen: '8/8/8/8/8/8/5k2/7K w - - 0 1', history: [], lastMove: null, resigned: null })).toMatchObject({ draw: true });
   });
+
+  it('draws when the same position occurs three times', () => {
+    const client = Client({ game: ChessGame, numPlayers: 2 });
+    client.start();
+    const shuffle: Array<[string, string]> = [['g1', 'f3'], ['g8', 'f6'], ['f3', 'g1'], ['f6', 'g8']];
+    for (const [from, to] of [...shuffle, ...shuffle]) {
+      expect(client.getState()?.ctx.gameover).toBeUndefined();
+      client.moves.makeMove(from, to);
+    }
+    expect(client.getState()?.ctx.gameover).toMatchObject({ draw: true });
+  });
 });

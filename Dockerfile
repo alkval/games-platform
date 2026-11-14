@@ -27,7 +27,10 @@ WORKDIR /app
 
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev && npm cache clean --force && npx prisma generate
+# The deploy service checks files out with a restrictive umask; the runtime user must
+# still be able to read the schema and migrations it applies on start.
+RUN chmod -R a+rX prisma package.json package-lock.json \
+  && npm ci --omit=dev && npm cache clean --force && npx prisma generate
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-server ./dist-server

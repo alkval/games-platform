@@ -17,6 +17,7 @@ model User {
   updatedAt   DateTime      @updatedAt
   matchPlayers MatchPlayer[]
   stats       PlayerStat[]
+  seatClaims  SeatClaim[]
 }
 
 model Match {
@@ -71,6 +72,21 @@ model GameState {
   isGameover       Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  seatClaims       SeatClaim[]
 
   @@index([gameName, isGameover, updatedAt])
+}
+
+// Which signed-in account sits in which seat. Kept server-side only: boardgame.io
+// publishes everything in a player's lobby `data`, so identity must not live there.
+model SeatClaim {
+  matchId   String
+  playerId  String
+  userId    String
+  createdAt DateTime  @default(now())
+  room      GameState @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([matchId, playerId])
+  @@index([userId])
 }
