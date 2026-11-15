@@ -50,6 +50,27 @@ export function createExpressApp(): Express {
   return app;
 }
 
+/**
+ * Limits how many rooms one visitor can open. Room creation is boardgame.io's own public
+ * endpoint and each room is a database row, so without a cap a script could fill the disk.
+ */
+export function createRoomLimiter(limit: number, windowMs = 10 * 60 * 1000) {
+  const recent = new Map<string, number[]>();
+  return (visitor: string, now = Date.now()): boolean => {
+    const times = (recent.get(visitor) ?? []).filter((time) => now - time < windowMs);
+    if (times.length >= limit) {
+      recent.set(visitor, times);
+      return false;
+    }
+    times.push(now);
+    recent.set(visitor, times);
+    if (recent.size > 5000) {
+      for (const [key, value] of recent) if (value.every((time) => now - time >= windowMs)) recent.delete(key);
+    }
+    return true;
+  };
+}
+
 function passToExpress(app: Express, context: Parameters<Parameters<ReturnType<typeof Server>['app']['use']>[0]>[0]): Promise<void> {
   context.status = 200;
   context.respond = false;
@@ -100,7 +121,18 @@ export async function startServer(): Promise<() => Promise<void>> {
   }
   const stopRoomCleanup = startRoomCleanup();
 
+  const allowRoom = createRoomLimiter(env.ROOM_CREATE_LIMIT_PER_10_MIN);
   gameServer.app.use(async (context, next) => {
+    if (context.method === 'POST' && /^\/games\/[^/]+\/(create|[^/]+\/playAgain)$/.test(context.path)) {
+      // Behind the Cloudflare Tunnel the socket address is the tunnel, so prefer the visitor header.
+      const visitor = context.get('cf-connecting-ip') || context.get('x-forwarded-for').split(',')[0].trim() || context.ip;
+      if (!allowRoom(visitor)) {
+        context.status = 429;
+        context.body = { error: 'Too many rooms opened. Try again in a few minutes.' };
+        return;
+      }
+    }
+
     if (context.path.startsWith('/api/')) {
       await passToExpress(expressApp, context);
       return;

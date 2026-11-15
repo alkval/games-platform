@@ -1,4 +1,3 @@
-import { RandomBot } from 'boardgame.io/ai';
 import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
 import type { Game } from 'boardgame.io';
@@ -50,7 +49,7 @@ describe('computer practice support', () => {
       game: MattisGame,
       numPlayers: 4,
       playerID: '0',
-      multiplayer: Local({ bots: { '1': RandomBot, '2': RandomBot, '3': RandomBot } }),
+      multiplayer: Local({ bots: { '1': EasyBot, '2': EasyBot, '3': EasyBot } }),
     });
     client.start();
     const before = client.getState()!._stateID;
@@ -71,5 +70,55 @@ describe('computer practice support', () => {
     expect(normal.getOpt('playoutDepth')).toBe(24);
     expect(hard.getOpt('iterations')).toBe(180);
     expect(hard.getOpt('playoutDepth')).toBe(45);
+  });
+
+  it('lets the human resign in practice while the bot is thinking', async () => {
+    const client = Client({ game: ChessGame, numPlayers: 2, playerID: '0', multiplayer: Local({ bots: { '1': HardBot } }) });
+    client.start();
+    client.moves.makeMove('e2', 'e4');
+    client.moves.resign();
+    expect(client.getState()?.ctx.gameover).toMatchObject({ winner: '1' });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    client.stop();
+  });
+
+  it('has the hard chess bot answer with a sensible move in a few seconds', { timeout: 20000 }, async () => {
+    const client = Client({ game: ChessGame, numPlayers: 2, playerID: '0', multiplayer: Local({ bots: { '1': HardBot } }) });
+    client.start();
+    client.moves.makeMove('e2', 'e4');
+    const deadline = Date.now() + 12000;
+    while ((client.getState()?.G.history.length ?? 0) < 2 && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(client.getState()?.G.history).toHaveLength(2);
+    client.stop();
+  });
+
+  it('has every bot seat take its turn in a multi-bot game, at every difficulty', async () => {
+    for (const Bot of [EasyBot, NormalBot]) {
+      const client = Client({ game: MattisGame, numPlayers: 4, playerID: '0', multiplayer: Local({ bots: { '1': Bot, '2': Bot, '3': Bot } }) });
+      client.start();
+      client.moves.playCard(0);
+      const deadline = Date.now() + 25000;
+      // After the human's card, bots 1, 2 and 3 must each play before the trick resolves.
+      while ((client.getState()?.G.round ?? 1) < 2 && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 25));
+      expect(client.getState()?.G.round).toBeGreaterThanOrEqual(2);
+      client.stop();
+    }
+  }, 60000);
+
+  it('ends a practice game when the human gives up on a bot\'s turn', async () => {
+    const war = Client({ game: WarGame, numPlayers: 2, playerID: '0', multiplayer: Local({ bots: { '1': EasyBot } }) });
+    war.start();
+    war.moves.playCard(0);
+    war.moves.giveUp();
+    expect(war.getState()?.ctx.gameover).toMatchObject({ winner: '1', forfeit: true });
+    war.stop();
+
+    const mattis = Client({ game: MattisGame, numPlayers: 3, playerID: '0', multiplayer: Local({ bots: { '1': EasyBot, '2': EasyBot } }) });
+    mattis.start();
+    mattis.moves.playCard(0);
+    mattis.moves.giveUp();
+    expect(mattis.getState()?.ctx.gameover).toMatchObject({ loser: '0' });
+    mattis.stop();
+    await new Promise((resolve) => setTimeout(resolve, 200));
   });
 });

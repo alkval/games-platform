@@ -196,4 +196,18 @@ describe('Mattis game', () => {
       client.stop();
     }
   });
+
+  it('makes a player who gives up Mattis and ranks the rest', () => {
+    const client = Client({ game: { ...MattisGame, playerView: undefined, seed: 'give-up' }, numPlayers: 4 });
+    client.start();
+    client.updatePlayerID('2');
+    client.moves.playCard(0);                 // not their turn: ignored
+    expect(client.getState()?.G.trick).toEqual([]);
+    client.moves.giveUp();
+    const result = client.getState()?.ctx.gameover;
+    expect(result).toMatchObject({ loser: '2' });
+    expect(result.placements['2']).toBe(4);
+    expect(Object.values(result.placements).sort()).toEqual([1, 2, 3, 4]);
+    expect(result.winner).not.toBe('2');
+  });
 });

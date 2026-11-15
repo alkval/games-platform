@@ -28,6 +28,8 @@ export interface WarState {
   lastResult: string;
   /** Who plays first in the current trick. Optional so rooms started before this field keep working. */
   leader?: string;
+  /** Set when a player gives up; the other player wins. */
+  forfeitedBy?: string | null;
 }
 
 const suits: Suit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
@@ -66,7 +68,11 @@ export function resolveTrick(state: WarState): void {
   state.round += 1;
 }
 
-export function getWarResult(state: WarState): { winner?: string; draw?: boolean; scores: Record<string, number> } {
+export function getWarResult(state: WarState): { winner?: string; draw?: boolean; forfeit?: boolean; scores: Record<string, number> } {
+  if (state.forfeitedBy) {
+    return { winner: state.forfeitedBy === '0' ? '1' : '0', forfeit: true, scores: state.tricksWon };
+  }
+
   const playerZero = state.tricksWon['0'];
   const playerOne = state.tricksWon['1'];
 
@@ -104,34 +110,52 @@ export const WarGame: Game<WarState> = {
     };
   },
   moves: {
-    playCard: ({ G, playerID }, cardIndex: number) => {
-      const hand = G.hands[playerID];
-      if (!hand || !Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= hand.length) {
-        return INVALID_MOVE;
-      }
+    // Hands are hidden, so a browser cannot predict the result of a move. Running moves
+    // only on the server keeps a fast double tap from playing a second card locally.
+    playCard: {
+      client: false,
+      move: ({ G, ctx, playerID }, cardIndex: number) => {
+        // Both players stay active so either can give up; only the player to move may play.
+        if (playerID !== ctx.currentPlayer) return INVALID_MOVE;
+        const hand = G.hands[playerID];
+        if (!hand || !Number.isInteger(cardIndex) || cardIndex < 0 || cardIndex >= hand.length) {
+          return INVALID_MOVE;
+        }
 
-      if (G.currentTrick.length === 0) G.lastTrick = [];
-      const [card] = hand.splice(cardIndex, 1);
-      G.handCounts[playerID] = hand.length;
-      G.currentTrick.push({ playerID, card });
-      resolveTrick(G);
+        if (G.currentTrick.length === 0) G.lastTrick = [];
+        const [card] = hand.splice(cardIndex, 1);
+        G.handCounts[playerID] = hand.length;
+        G.currentTrick.push({ playerID, card });
+        resolveTrick(G);
+      },
+    },
+    // Allowed on either player's turn and does not use up the turn's move.
+    giveUp: {
+      client: false,
+      noLimit: true,
+      move: ({ G, playerID }) => {
+        if (G.forfeitedBy) return INVALID_MOVE;
+        G.forfeitedBy = playerID;
+      },
     },
   },
   turn: {
     minMoves: 1,
     maxMoves: 1,
+    activePlayers: { all: null } as never, // boardgame.io's ActivePlayers.ALL
     order: {
       first: () => 0,
       next: ({ G, ctx }) => (G.currentTrick.length === 1 ? 1 - Number(ctx.currentPlayer) : Number(G.leader ?? '0')),
     },
   },
   endIf: ({ G }) => {
+    if (G.forfeitedBy) return getWarResult(G);
     const handsAreEmpty = G.handCounts['0'] === 0 && G.handCounts['1'] === 0;
     return handsAreEmpty && G.currentTrick.length === 0 ? getWarResult(G) : undefined;
   },
   ai: {
-    enumerate: (G, _ctx, playerID) =>
-      (G.hands[playerID] ?? []).map((_card, index) => ({ move: 'playCard', args: [index] })),
+    enumerate: (G, ctx, playerID) =>
+      (playerID === ctx.currentPlayer ? G.hands[playerID] ?? [] : []).map((_card, index) => ({ move: 'playCard', args: [index] })),
   },
   playerView: ({ G, playerID }) => ({
     ...G,

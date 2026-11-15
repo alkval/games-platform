@@ -10,6 +10,9 @@ export interface ChessState {
   resigned: string | null;
   /** How often each position has occurred. Optional so rooms started before this field keep working. */
   positions?: Record<string, number>;
+  /** The seat that has offered a draw and is waiting for an answer. */
+  drawOffer?: string | null;
+  agreedDraw?: boolean;
 }
 
 /** A position for repetition purposes: pieces, side to move, castling rights and en passant square. */
@@ -22,6 +25,8 @@ export function getChessResult(state: ChessState) {
     const winner = state.resigned === '0' ? '1' : '0';
     return { winner, scores: { '0': winner === '0' ? 1 : 0, '1': winner === '1' ? 1 : 0 } };
   }
+
+  if (state.agreedDraw) return { draw: true, scores: { '0': 0, '1': 0 } };
 
   const chess = new Chess(state.fen);
   // chess.js rebuilt from a FEN has no move history, so repetition is counted in the game state.
@@ -50,6 +55,8 @@ export const ChessGame: Game<ChessState> = {
       try {
         const move = chess.move({ from, to, promotion });
         G.fen = chess.fen();
+        // Playing on withdraws your own offer and declines the opponent's.
+        G.drawOffer = null;
         G.positions ??= {};
         G.positions[positionKey(G.fen)] = (G.positions[positionKey(G.fen)] ?? 0) + 1;
         G.history.push(move.san);
@@ -58,11 +65,35 @@ export const ChessGame: Game<ChessState> = {
         return INVALID_MOVE;
       }
     },
-    resign: ({ G, playerID }) => {
-      G.resigned = playerID;
+    // Resigning is allowed on either player's turn and does not use up the turn's move.
+    resign: {
+      move: ({ G, playerID }) => {
+        if (G.resigned) return INVALID_MOVE;
+        G.resigned = playerID;
+      },
+      noLimit: true,
+    },
+    offerDraw: {
+      move: ({ G, playerID }) => {
+        if (G.drawOffer || G.resigned) return INVALID_MOVE;
+        G.drawOffer = playerID;
+      },
+      noLimit: true,
+    },
+    answerDraw: {
+      move: ({ G, playerID }, accept: boolean) => {
+        if (!G.drawOffer || G.drawOffer === playerID) return INVALID_MOVE;
+        if (accept === true) G.agreedDraw = true;
+        G.drawOffer = null;
+      },
+      noLimit: true,
     },
   },
-  turn: { minMoves: 1, maxMoves: 1 },
+  // Both players stay active so the waiting player can resign; makeMove itself rejects
+  // a move from the side that is not to play. Only the current player's move ends the turn.
+  // (`{ all: null }` is boardgame.io's ActivePlayers.ALL; importing it would pull in a
+  // module path that Node's ESM loader cannot resolve on the server.)
+  turn: { minMoves: 1, maxMoves: 1, activePlayers: { all: null } as never },
   endIf: ({ G }) => getChessResult(G),
   ai: {
     enumerate: (G, _ctx, playerID) => {

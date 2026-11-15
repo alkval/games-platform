@@ -1,6 +1,7 @@
 import type { BoardProps } from 'boardgame.io/react';
 import { Chess, type Color, type PieceSymbol, type Square } from 'chess.js';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { allSeatsTaken } from '../../ui/names';
 import type { ChessState } from './game';
 
 const glyphs: Record<Color, Record<PieceSymbol, string>> = {
@@ -10,7 +11,7 @@ const glyphs: Record<Color, Record<PieceSymbol, string>> = {
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
-export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, matchData }: BoardProps<ChessState>) {
+export function ChessBoard({ G, ctx, moves, playerID, isConnected, matchData }: BoardProps<ChessState>) {
   const chess = useMemo(() => new Chess(G.fen), [G.fen]);
   const [selected, setSelected] = useState<Square | null>(null);
   const [promotion, setPromotion] = useState<{ from: Square; to: Square } | null>(null);
@@ -21,6 +22,25 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
   const legalTargets = useMemo(() => selected ? chess.moves({ square: selected, verbose: true }).map((move) => move.to) : [], [chess, selected]);
   const name = (id: string) => matchData?.find((player) => String(player.id) === id)?.name ?? (id === '0' ? 'White' : 'Black');
   const gameover = ctx.gameover as { winner?: string; draw?: boolean } | undefined;
+  const ownColor = playerID === '0' ? 'w' : playerID === '1' ? 'b' : null;
+  const ready = allSeatsTaken(matchData);
+  // Both players are always "active" so either can resign, so whose move it is comes from the position.
+  const myTurn = Boolean(ready && ownColor && !gameover && chess.turn() === ownColor);
+
+  // A pending resignation should not stay armed forever: it resets after a moment and after any move.
+  useEffect(() => {
+    if (!confirmResign) return;
+    const timer = setTimeout(() => setConfirmResign(false), 5000);
+    return () => clearTimeout(timer);
+  }, [confirmResign]);
+  useEffect(() => setConfirmResign(false), [G.fen]);
+
+  useEffect(() => {
+    if (!promotion) return;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setPromotion(null); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [promotion]);
 
   function attemptMove(from: Square, to: Square) {
     const candidates = chess.moves({ square: from, verbose: true }).filter((move) => move.to === to);
@@ -32,9 +52,8 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
   }
 
   function choose(square: Square) {
-    if (!isActive || !playerID || gameover) return;
+    if (!myTurn) return;
     const piece = chess.get(square);
-    const ownColor = playerID === '0' ? 'w' : 'b';
     if (!selected) {
       if (piece?.color === ownColor) setSelected(square);
       return;
@@ -46,7 +65,8 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
     attemptMove(selected, square);
   }
 
-  const status = gameover
+  const status = !ready ? 'Waiting for your opponent to join'
+    : gameover
     ? gameover.draw ? 'Draw' : gameover.winner === playerID ? 'You win' : `${name(gameover.winner ?? '0')} wins`
     : chess.inCheck() ? `${chess.turn() === 'w' ? name('0') : name('1')} is in check`
     : `${chess.turn() === 'w' ? name('0') : name('1')} to move`;
@@ -66,7 +86,7 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
               const light = (files.indexOf(file) + Number(rank)) % 2 === 1;
               const target = legalTargets.includes(square);
               const last = G.lastMove?.from === square || G.lastMove?.to === square;
-              const canDrag = Boolean(isActive && playerID && piece?.color === (playerID === '0' ? 'w' : 'b'));
+              const canDrag = Boolean(myTurn && piece?.color === ownColor);
               return <button
                 key={square}
                 type="button"
@@ -93,13 +113,16 @@ export function ChessBoard({ G, ctx, moves, playerID, isActive, isConnected, mat
             <p className="label">Status</p><h2 className="mt-2 text-2xl font-bold">{status}</h2>
             <div className="mt-6 space-y-2 text-sm"><p><b>White:</b> {name('0')}</p><p><b>Black:</b> {name('1')}</p><p className="text-stone-500">You are {playerID === '0' ? 'White' : playerID === '1' ? 'Black' : 'spectating'}.</p></div>
             <div className="mt-6 max-h-64 overflow-auto border-t border-stone-200 pt-4 text-sm text-stone-600">
-              {G.history.length ? G.history.map((move, index) => <span key={index} className="mr-3 inline-block"><b>{Math.floor(index / 2) + 1}{index % 2 ? '...' : '.'}</b> {move}</span>) : 'No moves yet.'}
+              {G.history.length ? G.history.map((move, index) => index % 2 ? null : <span key={index} className="mr-3 inline-block"><b>{index / 2 + 1}.</b> {move}{G.history[index + 1] ? ` ${G.history[index + 1]}` : ''}</span>) : ready ? 'No moves yet.' : 'Share the invite link above. The game starts when both players are here.'}
             </div>
-            {!gameover && playerID && <button className="secondary-button mt-6 w-full" type="button" onClick={() => confirmResign ? moves.resign() : setConfirmResign(true)}>{confirmResign ? 'Click again to confirm resignation' : 'Resign'}</button>}
+            {!gameover && ready && playerID && G.drawOffer && G.drawOffer !== playerID && <div className="mt-6 rounded-lg border border-stone-300 p-3 text-sm"><p className="font-semibold">{name(G.drawOffer)} offers a draw.</p><div className="mt-3 flex gap-2"><button className="primary-button flex-1" type="button" onClick={() => moves.answerDraw(true)}>Accept</button><button className="secondary-button flex-1" type="button" onClick={() => moves.answerDraw(false)}>Decline</button></div></div>}
+            {!gameover && ready && playerID && G.drawOffer === playerID && <p className="mt-6 text-sm text-stone-500">Draw offered. Waiting for {name(playerID === '0' ? '1' : '0')} to answer; it is withdrawn if either of you moves.</p>}
+            {!gameover && ready && playerID && !G.drawOffer && <button className="secondary-button mt-6 w-full" type="button" onClick={() => moves.offerDraw()}>Offer a draw</button>}
+            {!gameover && ready && playerID && <button className="secondary-button mt-3 w-full" type="button" onClick={() => { if (confirmResign) { moves.resign(); setConfirmResign(false); } else setConfirmResign(true); }}>{confirmResign ? 'Click again to confirm resignation' : 'Resign'}</button>}
           </aside>
         </div>
       </div>
-      {promotion && <div className="promotion-backdrop" role="dialog" aria-modal="true" aria-label="Choose promotion piece"><div className="promotion-picker"><p className="font-semibold">Promote pawn to</p><div className="mt-4 flex gap-2">{(['q', 'r', 'b', 'n'] as const).map((piece) => <button className="promotion-piece" key={piece} type="button" onClick={() => { moves.makeMove(promotion.from, promotion.to, piece); setPromotion(null); }}>{glyphs[playerID === '1' ? 'b' : 'w'][piece]}</button>)}</div></div></div>}
+      {promotion && <div className="promotion-backdrop" role="dialog" aria-modal="true" aria-label="Choose promotion piece" onClick={(event) => { if (event.target === event.currentTarget) setPromotion(null); }}><div className="promotion-picker"><p className="font-semibold">Promote pawn to</p><div className="mt-4 flex gap-2">{(['q', 'r', 'b', 'n'] as const).map((piece) => <button className="promotion-piece" key={piece} type="button" onClick={() => { moves.makeMove(promotion.from, promotion.to, piece); setPromotion(null); }}>{glyphs[playerID === '1' ? 'b' : 'w'][piece]}</button>)}</div><button className="secondary-button mt-4 w-full" type="button" onClick={() => setPromotion(null)}>Cancel</button></div></div>}
     </main>
   );
 }

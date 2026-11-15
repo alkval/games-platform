@@ -13,6 +13,8 @@ process.env.PORT = process.env.PORT ?? '3101';
 process.env.APP_URL = process.env.APP_URL ?? `http://localhost:${process.env.PORT}`;
 process.env.GOOGLE_CALLBACK_URL = `${process.env.APP_URL}/api/auth/google/callback`;
 process.env.AUTH_SECRET = 'integration-secret-that-is-at-least-32-characters';
+process.env.ADMIN_EMAIL = 'owner@example.test';
+process.env.ROOM_CREATE_LIMIT_PER_10_MIN = '8';
 const integrationDatabase = `integration-${process.pid}.db`;
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? `file:./${integrationDatabase}`;
 
@@ -197,7 +199,7 @@ async function run() {
     assert.equal(adminDelete.status, 401, 'Unauthenticated requests must not use destructive administration endpoints');
     console.log('Administration endpoints reject unauthenticated reads and deletes');
 
-    const adminUser = await prisma.user.create({ data: { googleId: `admin-${process.pid}`, email: 'admin@example.com', displayName: 'Alexander' } });
+    const adminUser = await prisma.user.create({ data: { googleId: `admin-${process.pid}`, email: process.env.ADMIN_EMAIL, displayName: 'Alexander' } });
     const adminToken = await new SignJWT({ email: adminUser.email, displayName: adminUser.displayName, avatarUrl: null })
       .setProtectedHeader({ alg: 'HS256' })
       .setSubject(adminUser.id)
@@ -222,6 +224,14 @@ async function run() {
     assert.equal((await fetch(`${serverUrl}/api/admin/users/${statsUser.id}`, { method: 'DELETE', headers: adminHeaders })).status, 204);
     assert.equal(await prisma.user.findUnique({ where: { id: statsUser.id } }), null);
     console.log('Authorized administration protects the owner and keeps statistics consistent after deletions');
+
+    let refused = 0;
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const response = await fetch(`${serverUrl}/games/war/create`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ numPlayers: 2 }) });
+      if (response.status === 429) refused += 1;
+    }
+    assert.ok(refused >= 2, 'Opening many rooms in a row was not rate limited');
+    console.log('Opening many rooms in a row is rate limited');
 
     const staleDate = new Date(Date.now() - 31 * 24 * 60 * 60 * 1000);
     const recentDate = new Date();
