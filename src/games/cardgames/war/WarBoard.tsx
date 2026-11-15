@@ -1,6 +1,8 @@
 import type { BoardProps } from 'boardgame.io/react';
 import { motion } from 'framer-motion';
 import type { Card, Suit, WarState } from './game';
+import { ConfirmButton } from '../../ui/ConfirmButton';
+import { allSeatsTaken, withPlayerNames } from '../../ui/names';
 
 const suitSymbols: Record<Suit, string> = {
   clubs: '♣',
@@ -28,15 +30,18 @@ function PlayingCard({ card, onClick, disabled }: { card: Card; onClick?: () => 
   );
 }
 
-export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, matchData }: BoardProps<WarState>) {
+export function WarBoard({ G, ctx, moves, playerID, isConnected, matchData }: BoardProps<WarState>) {
   const hand = playerID ? G.hands[playerID] ?? [] : [];
   const sortedHand = hand
     .map((card, originalIndex) => ({ card, originalIndex }))
     .sort((left, right) => left.card.rank - right.card.rank || left.card.suit.localeCompare(right.card.suit));
   const playerName = (id: string) => matchData?.find((player) => String(player.id) === id)?.name ?? `Player ${Number(id) + 1}`;
-  const gameover = ctx.gameover as { winner?: string; draw?: boolean } | undefined;
+  const gameover = ctx.gameover as { winner?: string; draw?: boolean; forfeit?: boolean } | undefined;
   const lastTrick = G.lastTrick ?? [];
   const visibleTrick = G.currentTrick.length ? G.currentTrick : lastTrick;
+  const ready = allSeatsTaken(matchData);
+  // Both players are always "active" so either can give up; whose turn it is comes from the turn order.
+  const canPlay = Boolean(ready && playerID && ctx.currentPlayer === playerID);
 
   return (
     <main className="game-table min-h-screen px-4 py-6 sm:px-8">
@@ -55,14 +60,14 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
           <aside className="score-panel">
             <p className="score-label">{playerName('0')}</p>
             <p className="score-number">{G.tricksWon['0']}</p>
-            <p className="text-sm text-stone-300">{G.handCounts['0']} cards left</p>
+            <p className="text-sm text-stone-300">{G.handCounts['0']} {G.handCounts['0'] === 1 ? 'card' : 'cards'} left</p>
           </aside>
 
           <div className="rounded-3xl border border-white/10 bg-black/15 p-5 text-center text-white sm:p-8">
             <p className="text-sm text-emerald-100/70">Round {Math.min(G.round, 26)} of 26</p>
             <div className="mt-8 flex min-h-44 items-center justify-center gap-5">
               {visibleTrick.length === 0 ? (
-                <p className="max-w-xs text-emerald-100/70">Choose a card when it is your turn.</p>
+                <p className="max-w-xs text-emerald-100/70">{ready ? 'Choose a card when it is your turn.' : 'Waiting for your opponent to join. Share the invite link above.'}</p>
               ) : (
                 visibleTrick.map((played) => (
                   <div key={played.playerID}>
@@ -73,14 +78,14 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
               )}
             </div>
             {lastTrick.length > 0 && G.currentTrick.length === 0 && <p className="mt-3 text-xs uppercase tracking-wider text-emerald-100/55">Last reveal</p>}
-            <p className="mt-5 min-h-6 text-sm text-amber-200">{G.lastResult}</p>
+            <p className="mt-5 min-h-6 text-sm text-amber-200">{withPlayerNames(G.lastResult, playerName)}</p>
             <p className="mt-2 text-xs text-emerald-100/60">Ties: {G.ties}</p>
           </div>
 
           <aside className="score-panel">
             <p className="score-label">{playerName('1')}</p>
             <p className="score-number">{G.tricksWon['1']}</p>
-            <p className="text-sm text-stone-300">{G.handCounts['1']} cards left</p>
+            <p className="text-sm text-stone-300">{G.handCounts['1']} {G.handCounts['1'] === 1 ? 'card' : 'cards'} left</p>
           </aside>
         </section>
 
@@ -90,23 +95,25 @@ export function WarBoard({ G, ctx, moves, playerID, isActive, isConnected, match
             <h2 className="mt-2 text-3xl font-bold">
               {gameover.draw ? 'It is a draw' : gameover.winner === playerID ? 'You win' : `${playerName(gameover.winner ?? '0')} wins`}
             </h2>
+            {gameover.forfeit && <p className="mt-2">{gameover.winner === playerID ? 'Your opponent gave up.' : gameover.winner === (playerID === '0' ? '1' : '0') ? 'You gave up.' : 'The other player gave up.'}</p>}
           </section>
         ) : (
           <section className="mt-8">
             <div className="mb-3 flex items-center justify-between text-sm text-stone-100">
-              <p>{playerID ? `You are ${playerName(playerID)}` : 'Spectating'}</p>
-              <p>{isActive ? 'Your turn' : `Waiting for ${playerName(ctx.currentPlayer)}`}</p>
+              <p>{!playerID ? 'Spectating' : playerName(playerID) === 'You' ? 'Your hand' : `You are ${playerName(playerID)}`}</p>
+              <p>{!ready ? 'Waiting for your opponent' : canPlay ? 'Your turn' : `Waiting for ${playerName(ctx.currentPlayer)}`}</p>
             </div>
             <div className="card-hand">
               {sortedHand.map(({ card, originalIndex }) => (
                 <PlayingCard
                   key={card.id}
                   card={card}
-                  disabled={!isActive}
+                  disabled={!canPlay}
                   onClick={() => moves.playCard(originalIndex)}
                 />
               ))}
             </div>
+            {ready && playerID && <ConfirmButton className="give-up-button" label="Give up" confirmLabel="Click again to give up and lose" onConfirm={() => moves.giveUp()} />}
           </section>
         )}
       </div>

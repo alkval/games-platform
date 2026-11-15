@@ -6,6 +6,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { MattisBoard } from '../../games/cardgames/mattis/MattisBoard';
 import { MattisGame } from '../../games/cardgames/mattis/game';
 import { useAuth } from '../auth-context';
+import { RematchButton } from '../components/RematchButton';
+import { freshGameToken, loadRoomSession, roomErrorMessage, savedPlayerName, saveRoomSession } from '../room-session';
 
 interface RoomSession {
   matchID: string;
@@ -17,14 +19,6 @@ interface RoomSession {
 const serverUrl = window.location.origin;
 const lobby = new LobbyClient({ server: serverUrl });
 const MattisClient = Client({ game: MattisGame, board: MattisBoard, multiplayer: SocketIO({ server: serverUrl }), debug: false });
-const sessionKey = (matchID: string) => `mattis-room:${matchID}`;
-
-function loadSession(matchID: string | null): RoomSession | null {
-  if (!matchID) return null;
-  const saved = sessionStorage.getItem(sessionKey(matchID));
-  if (!saved) return null;
-  try { return JSON.parse(saved) as RoomSession; } catch { return null; }
-}
 
 function readMatchID(value: string): string {
   const trimmed = value.trim();
@@ -35,12 +29,12 @@ function readMatchID(value: string): string {
 }
 
 export function MattisPage() {
-  const { user, gameToken } = useAuth();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const matchID = searchParams.get('match');
-  const [session, setSession] = useState<RoomSession | null>(() => loadSession(matchID));
-  const [name, setName] = useState(user?.displayName ?? sessionStorage.getItem('mattis-player-name') ?? '');
+  const [session, setSession] = useState<RoomSession | null>(() => loadRoomSession('mattis', matchID));
+  const [name, setName] = useState(user?.displayName ?? savedPlayerName('mattis') ?? '');
   const [roomInput, setRoomInput] = useState(matchID ?? '');
   const [numPlayers, setNumPlayers] = useState(2);
   const [busy, setBusy] = useState(false);
@@ -57,8 +51,7 @@ export function MattisPage() {
   );
 
   function saveSession(next: RoomSession) {
-    sessionStorage.setItem(sessionKey(next.matchID), JSON.stringify(next));
-    sessionStorage.setItem('mattis-player-name', next.playerName);
+    saveRoomSession('mattis', next);
     setSession(next);
   }
 
@@ -69,11 +62,11 @@ export function MattisPage() {
     setError('');
     try {
       const created = await lobby.createMatch('mattis', { numPlayers });
-      const joined = await lobby.joinMatch('mattis', created.matchID, { playerID: '0', playerName: name.trim(), data: { gameToken } });
+      const joined = await lobby.joinMatch('mattis', created.matchID, { playerID: '0', playerName: name.trim(), data: { gameToken: await freshGameToken() } });
       saveSession({ matchID: created.matchID, playerID: joined.playerID, credentials: joined.playerCredentials, playerName: name.trim() });
       navigate(`/cardgames/mattis?match=${encodeURIComponent(created.matchID)}`, { replace: true });
     } catch (roomError) {
-      setError(roomError instanceof Error ? roomError.message : 'Could not create the room.');
+      setError(roomErrorMessage(roomError, 'Could not create the room.'));
     } finally { setBusy(false); }
   }
 
@@ -89,12 +82,12 @@ export function MattisPage() {
       const openPlayer = match.players.find((player) => !player.name);
       if (!openPlayer) throw new Error('That room is full.');
       const joined = await lobby.joinMatch('mattis', requestedMatchID, {
-        playerID: String(openPlayer.id), playerName: name.trim(), data: { gameToken },
+        playerID: String(openPlayer.id), playerName: name.trim(), data: { gameToken: await freshGameToken() },
       });
       saveSession({ matchID: requestedMatchID, playerID: joined.playerID, credentials: joined.playerCredentials, playerName: name.trim() });
       navigate(`/cardgames/mattis?match=${encodeURIComponent(requestedMatchID)}`, { replace: true });
     } catch (roomError) {
-      setError(roomError instanceof Error ? roomError.message : 'Could not join the room.');
+      setError(roomErrorMessage(roomError, 'Could not join the room.'));
     } finally { setBusy(false); }
   }
 
@@ -102,14 +95,14 @@ export function MattisPage() {
     return (
       <div className="bg-emerald-950">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-5 py-3 text-sm text-emerald-50">
-          <Link className="hover:text-amber-200" to="/cardgames">Leave table</Link>
+          <Link className="hover:text-amber-200" to="/cardgames">Leave table</Link><RematchButton className="rounded-full border border-white/20 px-4 py-2 hover:bg-white/10" game="mattis" session={session} onJoined={(next) => { setSession(loadRoomSession('mattis', next)); navigate(`/cardgames/mattis?match=${encodeURIComponent(next)}`); }} />
           <button className="rounded-full border border-white/20 px-4 py-2 hover:bg-white/10" type="button" onClick={() => {
             void navigator.clipboard.writeText(roomLink);
             setCopied(true);
             window.setTimeout(() => setCopied(false), 1800);
           }}>{copied ? 'Link copied' : 'Copy invite link'}</button>
         </div>
-        <MattisClient matchID={session.matchID} playerID={session.playerID} credentials={session.credentials} />
+        <MattisClient key={session.matchID} matchID={session.matchID} playerID={session.playerID} credentials={session.credentials} />
       </div>
     );
   }

@@ -7,7 +7,6 @@ import { prisma } from './prisma.js';
 
 const sessionCookie = 'alkval_games_session';
 const signingKey = new TextEncoder().encode(env.AUTH_SECRET);
-export const adminEmail = 'alexanderogtore@gmail.com';
 
 export interface SessionClaims {
   userId: string;
@@ -17,7 +16,8 @@ export interface SessionClaims {
 }
 
 export function isAdminSession(session: SessionClaims | null): boolean {
-  return session?.email.toLowerCase() === adminEmail;
+  const adminEmail = env.ADMIN_EMAIL?.toLowerCase();
+  return Boolean(adminEmail) && session?.email.toLowerCase() === adminEmail;
 }
 
 async function createToken(claims: SessionClaims, audience: 'web' | 'game'): Promise<string> {

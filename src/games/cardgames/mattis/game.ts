@@ -49,6 +49,8 @@ export interface MattisState {
   mustPickUp: Record<string, boolean>;
   round: number;
   status: string;
+  /** Set when a player gives up; that player becomes Mattis. */
+  forfeitedBy?: string | null;
 }
 
 const suits: MattisSuit[] = ['clubs', 'diamonds', 'hearts', 'spades'];
@@ -88,7 +90,11 @@ function syncCounts(G: MattisState): void {
 }
 
 function drawReplacement(G: MattisState, playerID: string): void {
-  if (G.hands[playerID].length >= 3) return;
+  if (G.hands[playerID].length >= 3) {
+    // A blind play took a card from the stock without changing the hand.
+    syncCounts(G);
+    return;
+  }
   if (G.stock.length > 1) {
     G.hands[playerID].push(G.stock.pop()!);
   } else if (G.stock.length === 1) {
@@ -270,6 +276,18 @@ function advanceShedding(G: MattisState, playerID: string, completedTrick: boole
 }
 
 export function getMattisResult(G: MattisState): MattisResult | undefined {
+  if (G.forfeitedBy) {
+    // Whoever gives up is Mattis. The others rank by when they finished, then by fewest cards left.
+    const loser = G.forfeitedBy;
+    const stillIn = G.playerIDs
+      .filter((id) => id !== loser && !G.finishOrder.includes(id))
+      .sort((left, right) => G.hands[left].length + G.collected[left].length - (G.hands[right].length + G.collected[right].length));
+    const ordered = [...G.finishOrder.filter((id) => id !== loser), ...stillIn, loser];
+    const placements = Object.fromEntries(ordered.map((id, index) => [id, index + 1]));
+    const scores = Object.fromEntries(ordered.map((id, index) => [id, ordered.length - index - 1]));
+    return { winner: ordered[0], loser, placements, scores };
+  }
+
   const remaining = G.playerIDs.filter((id) => !G.finishOrder.includes(id));
   if (G.phase !== 'shedding' || remaining.length > 1) return undefined;
 
@@ -324,48 +342,74 @@ export const MattisGame: Game<MattisState> = {
   maxPlayers: 6,
   setup: ({ ctx, random }) => createInitialMattisState(random.Shuffle(createMattisDeck()), ctx.numPlayers),
   moves: {
-    playCard: ({ G, playerID }, cardIndex: number) => {
-      if (playerID !== G.activePlayer || !Number.isInteger(cardIndex)) return INVALID_MOVE;
-      const hand = G.hands[playerID];
-      if (cardIndex < 0 || cardIndex >= hand.length) return INVALID_MOVE;
-      const card = hand[cardIndex];
+    // Hands and the stock are hidden from each browser, so moves run only on the server.
+    // Predicting them locally showed a false phase change and could desync a fast double tap.
+    playCard: {
+      client: false,
+      move: ({ G, playerID }, cardIndex: number) => {
+        if (playerID !== G.activePlayer || !Number.isInteger(cardIndex)) return INVALID_MOVE;
+        const hand = G.hands[playerID];
+        if (cardIndex < 0 || cardIndex >= hand.length) return INVALID_MOVE;
+        const card = hand[cardIndex];
 
-      if (G.phase === 'collecting') {
-        hand.splice(cardIndex, 1);
+        if (G.phase === 'collecting') {
+          hand.splice(cardIndex, 1);
+          addCollectingPlay(G, playerID, card);
+          return;
+        }
+
+        if (!playSheddingCards(G, playerID, [cardIndex])) return INVALID_MOVE;
+      },
+    },
+    playSeries: {
+      client: false,
+      move: ({ G, playerID }, cardIndices: number[]) => {
+        if (!Array.isArray(cardIndices) || cardIndices.length < 2 || !playSheddingCards(G, playerID, cardIndices)) return INVALID_MOVE;
+      },
+    },
+    drawBlind: {
+      client: false,
+      move: ({ G, playerID }) => {
+        if (G.phase !== 'collecting' || playerID !== G.activePlayer || G.stock.length <= 1) return INVALID_MOVE;
+        const card = G.stock.pop()!;
         addCollectingPlay(G, playerID, card);
-        return;
-      }
+      },
+    },
+    pickUpOldest: {
+      client: false,
+      move: ({ G, playerID }) => {
+        if (G.phase !== 'shedding' || playerID !== G.activePlayer || G.trick.length === 0) return INVALID_MOVE;
+        const [oldest] = G.trick.splice(0, 1);
+        G.hands[playerID].push(...(oldest.cards ?? [oldest.card]));
+        G.mustPickUp[playerID] = false;
+        syncCounts(G);
 
-      if (!playSheddingCards(G, playerID, [cardIndex])) return INVALID_MOVE;
+        const emptiedTable = G.trick.length === 0;
+        if (emptiedTable) {
+          G.round += 1;
+          G.trickTarget = G.playerIDs.length - G.finishOrder.length;
+          G.status = `Player ${Number(playerID) + 1} picked up. The next player leads.`;
+        }
+        advanceShedding(G, playerID, false);
+        if (emptiedTable) G.leader = G.activePlayer;
+      },
     },
-    playSeries: ({ G, playerID }, cardIndices: number[]) => {
-      if (!Array.isArray(cardIndices) || cardIndices.length < 2 || !playSheddingCards(G, playerID, cardIndices)) return INVALID_MOVE;
-    },
-    drawBlind: ({ G, playerID }) => {
-      if (G.phase !== 'collecting' || playerID !== G.activePlayer || G.stock.length <= 1) return INVALID_MOVE;
-      const card = G.stock.pop()!;
-      addCollectingPlay(G, playerID, card);
-    },
-    pickUpOldest: ({ G, playerID }) => {
-      if (G.phase !== 'shedding' || playerID !== G.activePlayer || G.trick.length === 0) return INVALID_MOVE;
-      const [oldest] = G.trick.splice(0, 1);
-      G.hands[playerID].push(...(oldest.cards ?? [oldest.card]));
-      G.mustPickUp[playerID] = false;
-      syncCounts(G);
-
-      const emptiedTable = G.trick.length === 0;
-      if (emptiedTable) {
-        G.round += 1;
-        G.trickTarget = G.playerIDs.length - G.finishOrder.length;
-        G.status = `Player ${Number(playerID) + 1} picked up. The next player leads.`;
-      }
-      advanceShedding(G, playerID, false);
-      if (emptiedTable) G.leader = G.activePlayer;
+    // Allowed on anyone's turn and does not use up the turn's move.
+    giveUp: {
+      client: false,
+      noLimit: true,
+      move: ({ G, playerID }) => {
+        if (G.forfeitedBy || G.finishOrder.includes(playerID)) return INVALID_MOVE;
+        G.forfeitedBy = playerID;
+        G.status = `Player ${Number(playerID) + 1} gave up.`;
+      },
     },
   },
   turn: {
     minMoves: 1,
     maxMoves: 1,
+    // Everyone stays active so anyone can give up; every other move checks G.activePlayer itself.
+    activePlayers: { all: null } as never, // boardgame.io's ActivePlayers.ALL
     order: {
       first: () => 0,
       next: ({ G }) => Number(G.activePlayer),

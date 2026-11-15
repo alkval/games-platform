@@ -5,8 +5,10 @@ A self-hosted multiplayer card and board game platform for [games.alkval.com](ht
 ## Features
 
 - Online invite rooms over Socket.IO
+- Resign or give up at any time, draw offers in chess, and one-click rematches
+- Room creation is rate limited per visitor (`ROOM_CREATE_LIMIT_PER_10_MIN`, default 30)
 - War, Norwegian Mattis (2-6 players), and complete standard chess
-- Local computer practice with Easy, Normal, and Hard boardgame.io bots
+- Local computer practice with Easy, Normal, and Hard bots (boardgame.io bots for the card games, a small alpha-beta engine for chess)
 - Up to five named Mattis bots: Craig, Hubert, Eugene, Montgomery, and Cornelius
 - Google OAuth sign-in with guest play remaining available
 - Private owner-only email data and public player profiles
@@ -55,7 +57,7 @@ scripts/                 End-to-end multiplayer and privacy checks
 public/                  Favicons and static assets
 ```
 
-Each game registers metadata, a boardgame.io rules object, a React board, player limits, and legal AI actions. Online game state is server-authoritative. `playerView` removes hidden cards before state is sent to another player.
+Each game registers metadata, a boardgame.io rules object, a React board, player limits, and legal AI actions. Online game state is server-authoritative. `playerView` removes hidden cards before state is sent to another player. Because a browser cannot see those hidden cards, War and Mattis moves are marked `client: false` and run only on the server; chess, which has no hidden state, still updates optimistically. Chess keeps both players active so either can resign at any time, and `makeMove` itself rejects the side that is not to play. A seat's credentials are kept in `localStorage`, so a closed tab can return to its game from the invite link.
 
 ## Authentication and privacy
 
@@ -63,7 +65,7 @@ Google sign-in requests the `profile` and `email` scopes. A seven-day HTTP-only,
 
 Emails are returned only from the signed-in owner's private profile endpoint. Public leaderboards and profiles expose display name, avatar, join date, and game statistics only.
 
-The `/admin` route and every `/api/admin/*` operation are restricted server-side to `alexanderogtore@gmail.com`. The navigation link is shown only to that account, but authorization never relies on the hidden link. Destructive controls require confirmation, the active administrator cannot delete their own account, and deleting a completed match rebuilds aggregate player statistics so profiles and leaderboards remain consistent. Deleting an account removes its identity and statistics while retaining the match as anonymized history.
+The `/admin` route and every `/api/admin/*` operation are restricted server-side to the account named by the `ADMIN_EMAIL` environment variable (administration is off when it is unset). The navigation link is shown only to that account, but authorization never relies on the hidden link. Destructive controls require confirmation, the active administrator cannot delete their own account, and deleting a completed match rebuilds aggregate player statistics so profiles and leaderboards remain consistent. Deleting an account removes its identity and statistics while retaining the match as anonymized history.
 
 ## Data model
 

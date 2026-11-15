@@ -502,6 +502,20 @@ input:focus-visible {
   height: 6.4rem;
 }
 
+.give-up-button {
+  margin-top: 1rem;
+  border: 1px solid rgb(255 255 255 / 0.25);
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  color: #e7e5e4;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.give-up-button:hover {
+  background: rgb(255 255 255 / 0.1);
+}
+
 .mattis-pickup-button,
 .mattis-dare-button {
   min-height: 2.5rem;
@@ -606,6 +620,31 @@ input:focus-visible {
 
 .card-hand .playing-card {
   scroll-snap-align: start;
+}
+
+/* On a phone a long hand wraps into rows of six smaller cards instead of one long sideways strip. */
+@media (max-width: 640px) {
+  .card-hand {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    overflow-x: visible;
+    gap: 0.3rem;
+    scroll-snap-type: none;
+    touch-action: auto;
+  }
+
+  .card-hand .playing-card {
+    width: auto;
+    height: auto;
+    aspect-ratio: 5 / 7;
+    padding: 0.3rem 0.35rem;
+    font-size: 0.95rem;
+  }
+
+  .card-hand .playing-card .text-3xl {
+    font-size: 1.25rem;
+    line-height: 1.1;
+  }
 }
 
 /* Tailwind utilities used by the screens inherit the same effective theme. */

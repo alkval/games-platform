@@ -1,6 +1,7 @@
 import type { LogEntry, Server as ServerTypes, State, StorageAPI } from 'boardgame.io';
 import { prisma } from './prisma.js';
 import { verifyGameToken } from './auth.js';
+import { outcomeFor } from '../games/results.js';
 
 function decode<T>(value: string): T {
   return JSON.parse(value) as T;
@@ -55,6 +56,7 @@ async function saveMatchHistory(matchID: string, state: State, metadata: ServerT
 
   const result = state.ctx.gameover as {
     winner?: string;
+    loser?: string;
     draw?: boolean;
     scores?: Record<string, number>;
     placements?: Record<string, number>;
@@ -91,22 +93,16 @@ async function saveMatchHistory(matchID: string, state: State, metadata: ServerT
   for (const player of players) {
     if (!player.userId) continue;
 
-    const didWin = !result.draw && result.winner === player.playerID;
+    const outcome = outcomeFor(result, player.playerID);
+    const counts = { won: outcome === 'win' ? 1 : 0, lost: outcome === 'loss' ? 1 : 0, draws: outcome === 'draw' ? 1 : 0 };
     await prisma.playerStat.upsert({
       where: { userId_gameId: { userId: player.userId, gameId: metadata.gameName } },
-      create: {
-        userId: player.userId,
-        gameId: metadata.gameName,
-        played: 1,
-        won: didWin ? 1 : 0,
-        lost: didWin || result.draw ? 0 : 1,
-        draws: result.draw ? 1 : 0,
-      },
+      create: { userId: player.userId, gameId: metadata.gameName, played: 1, ...counts },
       update: {
         played: { increment: 1 },
-        won: { increment: didWin ? 1 : 0 },
-        lost: { increment: didWin || result.draw ? 0 : 1 },
-        draws: { increment: result.draw ? 1 : 0 },
+        won: { increment: counts.won },
+        lost: { increment: counts.lost },
+        draws: { increment: counts.draws },
       },
     });
   }

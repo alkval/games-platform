@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Link, Route, Routes } from 'react-router-dom';
 import { SiteHeader } from './components/SiteHeader';
 
 const HomePage = lazy(() => import('./pages/HomePage').then((module) => ({ default: module.HomePage })));
@@ -16,6 +16,16 @@ const AdminPage = lazy(() => import('./pages/AdminPage').then((module) => ({ def
 
 function PageLoading() {
   return <main className="page-shell text-stone-500">Loading...</main>;
+}
+
+function NotFoundPage() {
+  return (
+    <main className="page-shell">
+      <h1 className="text-5xl font-bold tracking-tight">Page not found</h1>
+      <p className="mt-4 max-w-2xl text-stone-600">There is nothing at this address. The link may be mistyped or out of date.</p>
+      <Link className="primary-button mt-8 inline-block" to="/">Back to the games</Link>
+    </main>
+  );
 }
 
 export function App() {
@@ -35,6 +45,7 @@ export function App() {
           <Route path="/practice" element={<PracticePage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </Suspense>
     </>

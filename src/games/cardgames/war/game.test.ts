@@ -79,4 +79,14 @@ describe('War game', () => {
     expect(client.getState()?.ctx.gameover).toBeDefined();
     expect(leaders).toEqual(new Set(['0', '1']));
   });
+
+  it('lets the waiting player give up, and never lets them play out of turn', () => {
+    const client = Client({ game: { ...WarGame, playerView: undefined, seed: 'give-up' }, numPlayers: 2 });
+    client.start();
+    client.updatePlayerID('1');
+    client.moves.playCard(0);
+    expect(client.getState()?.G.currentTrick).toEqual([]);
+    client.moves.giveUp();
+    expect(client.getState()?.ctx.gameover).toMatchObject({ winner: '0', forfeit: true });
+  });
 });

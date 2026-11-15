@@ -41,4 +41,49 @@ describe('ChessGame', () => {
     }
     expect(client.getState()?.ctx.gameover).toMatchObject({ draw: true });
   });
+
+  it('lets either player resign on the other player\'s turn', () => {
+    const client = Client({ game: ChessGame, numPlayers: 2 });
+    client.start();
+    expect(client.getState()?.ctx.currentPlayer).toBe('0');
+    client.updatePlayerID('1');
+    client.moves.resign();
+    expect(client.getState()?.ctx.gameover).toMatchObject({ winner: '0' });
+  });
+
+  it('still rejects a move from the side that is not to play', () => {
+    const client = Client({ game: ChessGame, numPlayers: 2 });
+    client.start();
+    client.updatePlayerID('1');
+    client.moves.makeMove('e7', 'e5');
+    expect(client.getState()?.G.history).toEqual([]);
+    client.updatePlayerID('0');
+    client.moves.makeMove('e2', 'e4');
+    client.moves.makeMove('d2', 'd4');
+    expect(client.getState()?.G.history).toEqual(['e4']);
+    expect(client.getState()?.ctx.currentPlayer).toBe('1');
+  });
+
+  it('ends in a draw when a draw offer is accepted, and not when it is declined or played through', () => {
+    const client = Client({ game: ChessGame, numPlayers: 2 });
+    client.start();
+    client.updatePlayerID('0');
+    client.moves.offerDraw();
+    client.moves.answerDraw(true);            // you cannot accept your own offer
+    expect(client.getState()?.ctx.gameover).toBeUndefined();
+    client.updatePlayerID('1');
+    client.moves.answerDraw(false);
+    expect(client.getState()?.G.drawOffer).toBeNull();
+
+    client.moves.offerDraw();                 // Black offers on White's turn
+    client.updatePlayerID('0');
+    client.moves.makeMove('e2', 'e4');        // playing on declines it
+    expect(client.getState()?.G.drawOffer).toBeNull();
+    expect(client.getState()?.ctx.currentPlayer).toBe('1');
+
+    client.moves.offerDraw();
+    client.updatePlayerID('1');
+    client.moves.answerDraw(true);
+    expect(client.getState()?.ctx.gameover).toMatchObject({ draw: true });
+  });
 });

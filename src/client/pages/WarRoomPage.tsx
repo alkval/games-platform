@@ -6,6 +6,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { WarBoard } from '../../games/cardgames/war/WarBoard';
 import { WarGame } from '../../games/cardgames/war/game';
 import { useAuth } from '../auth-context';
+import { RematchButton } from '../components/RematchButton';
+import { freshGameToken, loadRoomSession, roomErrorMessage, savedPlayerName, saveRoomSession } from '../room-session';
 
 interface RoomSession {
   matchID: string;
@@ -23,22 +25,6 @@ const WarClient = Client({
   debug: false,
 });
 
-function sessionKey(matchID: string): string {
-  return `war-room:${matchID}`;
-}
-
-function loadSession(matchID: string | null): RoomSession | null {
-  if (!matchID) return null;
-  const saved = sessionStorage.getItem(sessionKey(matchID));
-  if (!saved) return null;
-
-  try {
-    return JSON.parse(saved) as RoomSession;
-  } catch {
-    return null;
-  }
-}
-
 function readMatchID(value: string): string {
   const trimmed = value.trim();
   try {
@@ -50,12 +36,12 @@ function readMatchID(value: string): string {
 }
 
 export function WarRoomPage() {
-  const { user, gameToken } = useAuth();
+  const { user } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const matchID = searchParams.get('match');
-  const [session, setSession] = useState<RoomSession | null>(() => loadSession(matchID));
-  const [name, setName] = useState(user?.displayName ?? sessionStorage.getItem('war-player-name') ?? '');
+  const [session, setSession] = useState<RoomSession | null>(() => loadRoomSession('war', matchID));
+  const [name, setName] = useState(user?.displayName ?? savedPlayerName('war') ?? '');
   const [roomInput, setRoomInput] = useState(matchID ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -71,8 +57,7 @@ export function WarRoomPage() {
   );
 
   function saveSession(nextSession: RoomSession) {
-    sessionStorage.setItem(sessionKey(nextSession.matchID), JSON.stringify(nextSession));
-    sessionStorage.setItem('war-player-name', nextSession.playerName);
+    saveRoomSession('war', nextSession);
     setSession(nextSession);
   }
 
@@ -87,7 +72,7 @@ export function WarRoomPage() {
       const joined = await lobby.joinMatch('war', created.matchID, {
         playerID: '0',
         playerName: name.trim(),
-        data: { gameToken },
+        data: { gameToken: await freshGameToken() },
       });
       saveSession({
         matchID: created.matchID,
@@ -97,7 +82,7 @@ export function WarRoomPage() {
       });
       navigate(`/cardgames/war?match=${encodeURIComponent(created.matchID)}`, { replace: true });
     } catch (roomError) {
-      setError(roomError instanceof Error ? roomError.message : 'Could not create the room.');
+      setError(roomErrorMessage(roomError, 'Could not create the room.'));
     } finally {
       setBusy(false);
     }
@@ -119,7 +104,7 @@ export function WarRoomPage() {
       const joined = await lobby.joinMatch('war', requestedMatchID, {
         playerID: String(openPlayer.id),
         playerName: name.trim(),
-        data: { gameToken },
+        data: { gameToken: await freshGameToken() },
       });
       saveSession({
         matchID: requestedMatchID,
@@ -129,7 +114,7 @@ export function WarRoomPage() {
       });
       navigate(`/cardgames/war?match=${encodeURIComponent(requestedMatchID)}`, { replace: true });
     } catch (roomError) {
-      setError(roomError instanceof Error ? roomError.message : 'Could not join the room.');
+      setError(roomErrorMessage(roomError, 'Could not join the room.'));
     } finally {
       setBusy(false);
     }
@@ -139,7 +124,7 @@ export function WarRoomPage() {
     return (
       <div className="bg-emerald-950">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3 text-sm text-emerald-50">
-          <Link className="hover:text-amber-200" to="/cardgames">Leave table</Link>
+          <Link className="hover:text-amber-200" to="/cardgames">Leave table</Link><RematchButton className="rounded-full border border-white/20 px-4 py-2 hover:bg-white/10" game="war" session={session} onJoined={(next) => { setSession(loadRoomSession('war', next)); navigate(`/cardgames/war?match=${encodeURIComponent(next)}`); }} />
           <button
             className="rounded-full border border-white/20 px-4 py-2 hover:bg-white/10"
             type="button"
@@ -152,7 +137,7 @@ export function WarRoomPage() {
             {copied ? 'Link copied' : 'Copy invite link'}
           </button>
         </div>
-        <WarClient matchID={session.matchID} playerID={session.playerID} credentials={session.credentials} />
+        <WarClient key={session.matchID} matchID={session.matchID} playerID={session.playerID} credentials={session.credentials} />
       </div>
     );
   }

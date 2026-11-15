@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import type { MattisCard, MattisState, MattisSuit } from './game';
 import { canBeat, isMattisSeries } from './game';
+import { ConfirmButton } from '../../ui/ConfirmButton';
+import { withPlayerNames } from '../../ui/names';
 
 const suitSymbols: Record<MattisSuit, string> = {
   clubs: '\u2663',
@@ -128,7 +130,7 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{playerName(id)}{id === playerID ? ' (you)' : ''}</p>
                   <p className="text-xs text-emerald-100/65">
-                    {finished ? `Finished #${G.finishOrder.indexOf(id) + 1}` : `${G.handCounts[id]} cards in hand`}
+                    {finished ? `Finished #${G.finishOrder.indexOf(id) + 1}` : `${G.handCounts[id]} ${G.handCounts[id] === 1 ? 'card' : 'cards'} in hand`}
                   </p>
                 </div>
                 {G.phase === 'collecting' && <span className="text-xs text-emerald-100/65">{G.collectedCounts[id]} collected</span>}
@@ -157,14 +159,14 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
             )}
           </div>
           {lastTrick.length > 0 && G.trick.length === 0 && <p className="mt-3 text-xs uppercase tracking-wider text-emerald-100/55">Last completed trick</p>}
-          <p className="mt-5 min-h-6 text-sm text-amber-200">{G.status}</p>
+          <p className="mt-5 min-h-6 text-sm text-amber-200">{withPlayerNames(G.status, playerName)}</p>
         </section>
 
         {gameover ? (
           <section className="mx-auto mt-8 max-w-2xl rounded-2xl bg-amber-100 p-7 text-center text-stone-900 shadow-xl">
             <p className="text-sm font-semibold uppercase tracking-wider">Game over</p>
-            <h2 className="mt-2 text-3xl font-bold">{playerName(gameover.loser)} is Mattis</h2>
-            <p className="mt-2">{playerName(gameover.winner)} got rid of their cards first.</p>
+            <h2 className="mt-2 text-3xl font-bold">{playerName(gameover.loser) === 'You' ? 'You are Mattis' : `${playerName(gameover.loser)} is Mattis`}</h2>
+            <p className="mt-2">{G.forfeitedBy ? `${playerName(G.forfeitedBy)} gave up.` : `${playerName(gameover.winner)} got rid of their cards first.`}</p>
           </section>
         ) : (
           <section className="mt-7">
@@ -205,6 +207,7 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
             {canAct && G.phase === 'shedding' && top && !hand.some(legalCard) && (
               <p className="mt-2 text-sm text-amber-200">No card can beat the table. Pick up the oldest card.</p>
             )}
+            {playerID && !G.finishOrder.includes(playerID) && <ConfirmButton className="give-up-button" label="Give up" confirmLabel="Click again to give up and become Mattis" onConfirm={() => moves.giveUp()} />}
           </section>
         )}
       </div>

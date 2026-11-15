@@ -1,17 +1,18 @@
 import type { Express, Request, Response } from 'express';
 import type { Prisma } from '@prisma/client';
 import { publicGames } from '../games/public-games.js';
+import { outcomeFor, type GameResult } from '../games/results.js';
 import { isAdminSession, readSession, type SessionClaims } from './auth.js';
 import { prisma } from './prisma.js';
 import { joinedPlayerCount, roomExpiresAt } from './room-cleanup.js';
 
-type StoredResult = { winner?: string; draw?: boolean };
+type StoredResult = GameResult;
 type Stat = { gameId: string; played: number; won: number; lost: number; draws: number };
 const gameIds = publicGames.map((game) => game.id);
 function parseResult(value: string): StoredResult { try { return JSON.parse(value) as StoredResult; } catch { return {}; } }
 function fullStats(stats: Stat[]) { return gameIds.map((gameId) => { const found = stats.find((stat) => stat.gameId === gameId); const value = found ?? { gameId, played: 0, won: 0, lost: 0, draws: 0 }; return { ...value, winRate: value.played ? Math.round(value.won / value.played * 100) : 0 }; }); }
 function totals(stats: Stat[]) { const total = stats.reduce((sum, stat) => ({ played: sum.played + stat.played, won: sum.won + stat.won, lost: sum.lost + stat.lost, draws: sum.draws + stat.draws }), { played: 0, won: 0, lost: 0, draws: 0 }); return { ...total, winRate: total.played ? Math.round(total.won / total.played * 100) : 0, points: total.won * 3 + total.draws }; }
-function recentMatches(players: Array<{ playerId: string; playerName: string; score: number; placement: number | null; match: { id: string; gameId: string; endedAt: Date; resultJson: string } }>) { return players.map((player) => { const result = parseResult(player.match.resultJson); return { id: player.match.id, gameId: player.match.gameId, playerName: player.playerName, score: player.score, placement: player.placement, outcome: result.draw ? 'draw' : result.winner === player.playerId ? 'win' : 'loss', endedAt: player.match.endedAt }; }); }
+function recentMatches(players: Array<{ playerId: string; playerName: string; score: number; placement: number | null; match: { id: string; gameId: string; endedAt: Date; resultJson: string } }>) { return players.map((player) => { const result = parseResult(player.match.resultJson); return { id: player.match.id, gameId: player.match.gameId, playerName: player.playerName, score: player.score, placement: player.placement, outcome: outcomeFor(result, player.playerId), endedAt: player.match.endedAt }; }); }
 const userSelect = { id: true, displayName: true, avatarUrl: true, createdAt: true, stats: { select: { gameId: true, played: true, won: true, lost: true, draws: true } }, matchPlayers: { take: 10, orderBy: { match: { endedAt: 'desc' as const } }, select: { playerId: true, playerName: true, score: true, placement: true, match: { select: { id: true, gameId: true, endedAt: true, resultJson: true } } } } } as const;
 
 async function requireAdmin(request: Request, response: Response): Promise<SessionClaims | null> {
@@ -45,8 +46,9 @@ async function rebuildPlayerStats(database: Prisma.TransactionClient): Promise<v
       const key = `${player.userId}:${match.gameId}`;
       const stat = aggregate.get(key) ?? { userId: player.userId, gameId: match.gameId, played: 0, won: 0, lost: 0, draws: 0 };
       stat.played += 1;
-      if (result.draw) stat.draws += 1;
-      else if (result.winner === player.playerId) stat.won += 1;
+      const outcome = outcomeFor(result, player.playerId);
+      if (outcome === 'draw') stat.draws += 1;
+      else if (outcome === 'win') stat.won += 1;
       else stat.lost += 1;
       aggregate.set(key, stat);
     }
