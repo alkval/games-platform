@@ -195,6 +195,10 @@ async function run() {
 
     const adminOverview = await fetch(`${serverUrl}/api/admin/overview`);
     assert.equal(adminOverview.status, 401, 'Unauthenticated requests must not access administration');
+    for (const [method, path] of [['GET', '/api/does-not-exist'], ['POST', '/does-not-exist']]) {
+      const missing = await fetch(`${serverUrl}${path}`, { method, signal: AbortSignal.timeout(5000) });
+      assert.equal(missing.status, 404, `${method} ${path} must answer 404 instead of hanging`);
+    }
     const adminDelete = await fetch(`${serverUrl}/api/admin/users/${privacyUser.id}`, { method: 'DELETE' });
     assert.equal(adminDelete.status, 401, 'Unauthenticated requests must not use destructive administration endpoints');
     console.log('Administration endpoints reject unauthenticated reads and deletes');
