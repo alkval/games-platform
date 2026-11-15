@@ -42,6 +42,12 @@ export function createExpressApp(): Express {
     });
   }
 
+  // Nothing matched. Answer here, because the boardgame.io server hands the response over to
+  // Express and would otherwise leave the request open until it times out.
+  app.use((_request, response) => {
+    response.status(404).json({ error: 'Not found' });
+  });
+
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {
     console.error(error);
     response.status(500).json({ error: 'Something went wrong' });
