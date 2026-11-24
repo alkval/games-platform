@@ -5,6 +5,7 @@ import type { MattisCard, MattisState, MattisSuit } from './game';
 import { canBeat, isMattisSeries } from './game';
 import { ConfirmButton } from '../../ui/ConfirmButton';
 import { withPlayerNames } from '../../ui/names';
+import { AbsentPlayersNotice } from '../../ui/AbsentPlayersNotice';
 
 const suitSymbols: Record<MattisSuit, string> = {
   clubs: '\u2663',
@@ -121,6 +122,7 @@ export function MattisBoard({ G, ctx, moves, playerID, isActive, isConnected, ma
             <span className="rounded-full bg-black/20 px-4 py-2">{isConnected ? 'Connected' : 'Reconnecting'}</span>
           </div>
         </header>
+        <AbsentPlayersNotice className="mt-4 rounded-2xl bg-black/25 px-4 py-3 text-sm text-amber-200" matchData={matchData} playerID={playerID} gameover={ctx.gameover} />
 
         <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {G.playerIDs.map((id) => {

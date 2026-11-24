@@ -6,6 +6,7 @@ A self-hosted multiplayer card and board game platform for [games.alkval.com](ht
 
 - Online invite rooms over Socket.IO
 - Resign or give up at any time, draw offers in chess, and one-click rematches
+- A player who leaves an online game and does not come back within 2 minutes gives up automatically
 - Room creation is rate limited per visitor (`ROOM_CREATE_LIMIT_PER_10_MIN`, default 30)
 - War, Norwegian Mattis (2-6 players), and complete standard chess
 - Local computer practice with Easy, Normal, and Hard bots (boardgame.io bots for the card games, a small alpha-beta engine for chess)
@@ -57,7 +58,7 @@ scripts/                 End-to-end multiplayer and privacy checks
 public/                  Favicons and static assets
 ```
 
-Each game registers metadata, a boardgame.io rules object, a React board, player limits, and legal AI actions. Online game state is server-authoritative. `playerView` removes hidden cards before state is sent to another player. Because a browser cannot see those hidden cards, War and Mattis moves are marked `client: false` and run only on the server; chess, which has no hidden state, still updates optimistically. Chess keeps both players active so either can resign at any time, and `makeMove` itself rejects the side that is not to play. A seat's credentials are kept in `localStorage`, so a closed tab can return to its game from the invite link.
+Each game registers metadata, a boardgame.io rules object, a React board, player limits, and legal AI actions. Online game state is server-authoritative. `playerView` removes hidden cards before state is sent to another player. Because a browser cannot see those hidden cards, War and Mattis moves are marked `client: false` and run only on the server; chess, which has no hidden state, still updates optimistically. Chess keeps both players active so either can resign at any time, and `makeMove` itself rejects the side that is not to play. A seat's credentials are kept in `localStorage`, so a closed tab can return to its game from the invite link. If a player who had connected stays away for `ABANDON_GRACE_SECONDS` (default 120) while someone else is still at the table, the server makes their give-up or resign move for them (`src/server/abandoned-games.ts`); the others see a countdown meanwhile. Presence comes from the live sockets, because boardgame.io stores the `isConnected` flags without a lock and two simultaneous connection changes can overwrite each other; the same sweep repairs those flags for the players' display.
 
 ## Authentication and privacy
 

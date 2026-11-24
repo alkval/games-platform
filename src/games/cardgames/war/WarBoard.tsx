@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import type { Card, Suit, WarState } from './game';
 import { ConfirmButton } from '../../ui/ConfirmButton';
 import { allSeatsTaken, withPlayerNames } from '../../ui/names';
+import { AbsentPlayersNotice } from '../../ui/AbsentPlayersNotice';
 
 const suitSymbols: Record<Suit, string> = {
   clubs: '♣',
@@ -55,6 +56,7 @@ export function WarBoard({ G, ctx, moves, playerID, isConnected, matchData }: Bo
             {isConnected ? 'Connected' : 'Reconnecting'}
           </div>
         </header>
+        <AbsentPlayersNotice className="mt-4 rounded-2xl bg-black/25 px-4 py-3 text-sm text-amber-200" matchData={matchData} playerID={playerID} gameover={ctx.gameover} />
 
         <section className="war-layout mt-8 grid gap-4 lg:grid-cols-[1fr_2fr_1fr] lg:gap-6">
           <aside className="score-panel">

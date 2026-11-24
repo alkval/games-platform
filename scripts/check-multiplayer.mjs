@@ -15,6 +15,7 @@ process.env.GOOGLE_CALLBACK_URL = `${process.env.APP_URL}/api/auth/google/callba
 process.env.AUTH_SECRET = 'integration-secret-that-is-at-least-32-characters';
 process.env.ADMIN_EMAIL = 'owner@example.test';
 process.env.ROOM_CREATE_LIMIT_PER_10_MIN = '8';
+process.env.ABANDON_GRACE_SECONDS = '2';
 const integrationDatabase = `integration-${process.pid}.db`;
 process.env.DATABASE_URL = process.env.DATABASE_URL ?? `file:./${integrationDatabase}`;
 
@@ -183,6 +184,30 @@ async function run() {
     await prisma.user.delete({ where: { id: seatUser.id } });
     console.log(`Chess match ${chessRoom.matchID} completed and was saved`);
 
+    // A player who closes the tab and stays away gives up; one who comes back in time does not.
+    const leaveRoom = await post('/games/chess/create', { numPlayers: 2 });
+    const leaveSeats = [await post(`/games/chess/${leaveRoom.matchID}/join`, { playerID: '0', playerName: 'Alice' }), await post(`/games/chess/${leaveRoom.matchID}/join`, { playerID: '1', playerName: 'Bob' })];
+    const seatClient = (playerID) => Client({ game: ChessGame, multiplayer: SocketIO({ server: serverUrl }), matchID: leaveRoom.matchID, playerID, credentials: leaveSeats[Number(playerID)].playerCredentials });
+    const alice = seatClient('0');
+    let bob = seatClient('1');
+    clients.push(alice, bob);
+    alice.start();
+    bob.start();
+    await waitFor(() => alice.getState()?.isConnected && bob.getState()?.isConnected, 'Leave-test clients did not connect');
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    bob.stop();
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    bob = seatClient('1');
+    clients.push(bob);
+    bob.start();
+    await waitFor(() => bob.getState()?.isConnected, 'Bob did not reconnect');
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    assert.equal(alice.getState()?.ctx.gameover, undefined, 'A player who came back in time must not lose');
+    await waitFor(() => alice.matchData?.[1]?.isConnected === true, 'The displayed connection status was not corrected', 3000);
+    bob.stop();
+    await waitFor(() => alice.getState()?.ctx.gameover?.winner === '0', 'A player who left for good did not give up', 10000);
+    console.log(`Chess room ${leaveRoom.matchID}: leaving briefly is forgiven, leaving for good counts as giving up`);
+
     const privateEmail = `private-${process.pid}@example.test`;
     const privacyUser = await prisma.user.create({ data: { googleId: `privacy-${process.pid}`, email: privateEmail, displayName: 'Privacy Test Player', stats: { create: { gameId: 'chess', played: 2, won: 1, lost: 0, draws: 1 } } } });
     for (const path of ['/api/leaderboard?game=all', `/api/players/${privacyUser.id}`, '/api/matches/recent']) {
@@ -251,7 +276,13 @@ async function run() {
     assert.notEqual(await prisma.gameState.findUnique({ where: { id: `recent-empty-${process.pid}` } }), null);
     console.log('Room cleanup removes expired empty and abandoned rooms while preserving recent rooms');
   } finally {
-    clients.forEach((client) => client.stop());
+    clients.forEach((client) => {
+      try {
+        client.stop();
+      } catch {
+        // Already stopped by the test (the leave-and-return scenario).
+      }
+    });
     await new Promise((resolve) => setTimeout(resolve, 500));
     await stopServer();
     if (process.env.DATABASE_URL === `file:./${integrationDatabase}`) {

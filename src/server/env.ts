@@ -12,6 +12,8 @@ const envSchema = z.object({
   EMPTY_ROOM_TTL_HOURS: z.coerce.number().positive().default(24),
   STALE_ROOM_TTL_DAYS: z.coerce.number().positive().default(30),
   ROOM_CLEANUP_INTERVAL_MINUTES: z.coerce.number().positive().default(60),
+  // A player who leaves a running online game and stays away this long gives up.
+  ABANDON_GRACE_SECONDS: z.coerce.number().positive().default(120),
   // The one account allowed to use /admin. Without it, administration is switched off.
   ADMIN_EMAIL: z.string().email().optional(),
   ROOM_CREATE_LIMIT_PER_10_MIN: z.coerce.number().int().positive().default(30),

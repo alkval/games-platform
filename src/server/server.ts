@@ -14,9 +14,10 @@ import { env } from './env.js';
 import { PrismaGameStorage, scrubStoredGameTokens } from './game-storage.js';
 import { prisma } from './prisma.js';
 import { cleanupExpiredRooms, startRoomCleanup } from './room-cleanup.js';
+import { startAbandonedGameWatcher } from './abandoned-games.js';
 
 const require = createRequire(import.meta.url);
-const { Server } = require('boardgame.io/server') as typeof import('boardgame.io/server');
+const { Server, SocketIO } = require('boardgame.io/server') as typeof import('boardgame.io/server');
 
 export function createExpressApp(): Express {
   const app = express();
@@ -106,8 +107,11 @@ export async function startServer(): Promise<() => Promise<void>> {
   const expressApp = createExpressApp();
   const storage = new PrismaGameStorage();
   const allowedOrigins = [env.APP_URL, /^http:\/\/localhost:\d+$/];
+  const games = [WarGame, MattisGame, ChessGame];
+  const transport = new SocketIO();
   const gameServer = Server({
-    games: [WarGame, MattisGame, ChessGame],
+    games,
+    transport,
     db: storage as never,
     origins: allowedOrigins,
     apiOrigins: allowedOrigins,
@@ -126,6 +130,7 @@ export async function startServer(): Promise<() => Promise<void>> {
     console.error('Could not move stored account tokens out of room metadata', error);
   }
   const stopRoomCleanup = startRoomCleanup();
+  const stopAbandonedGameWatcher = startAbandonedGameWatcher(games as never, storage as never, transport);
 
   const allowRoom = createRoomLimiter(env.ROOM_CREATE_LIMIT_PER_10_MIN);
   gameServer.app.use(async (context, next) => {
@@ -156,6 +161,7 @@ export async function startServer(): Promise<() => Promise<void>> {
 
   return async () => {
     stopRoomCleanup();
+    stopAbandonedGameWatcher();
     gameServer.kill(runningServers);
     await prisma.$disconnect();
   };

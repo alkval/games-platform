@@ -3,6 +3,7 @@ import { Chess, type Color, type PieceSymbol, type Square } from 'chess.js';
 import { useEffect, useMemo, useState } from 'react';
 import { allSeatsTaken } from '../../ui/names';
 import type { ChessState } from './game';
+import { AbsentPlayersNotice } from '../../ui/AbsentPlayersNotice';
 
 const glyphs: Record<Color, Record<PieceSymbol, string>> = {
   w: { k: '\u265A', q: '\u265B', r: '\u265C', b: '\u265D', n: '\u265E', p: '\u265F' },
@@ -78,6 +79,7 @@ export function ChessBoard({ G, ctx, moves, playerID, isConnected, matchData }: 
           <div><p className="text-sm font-semibold uppercase tracking-[0.16em] text-amber-700">Board game</p><h1 className="text-3xl font-bold">Chess</h1></div>
           <span className="rounded-full border border-stone-300 px-4 py-2 text-sm">{isConnected ? 'Connected' : 'Reconnecting'}</span>
         </header>
+        <AbsentPlayersNotice className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900" matchData={matchData} playerID={playerID} gameover={ctx.gameover} />
         <div className="mt-7 grid items-start gap-6 lg:grid-cols-[minmax(0,44rem)_1fr]">
           <div className="chess-board" aria-label="Chess board">
             {orderedRanks.flatMap((rank) => orderedFiles.map((file) => {
